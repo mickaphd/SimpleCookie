@@ -17,4 +17,4 @@ Light and dark themes seamlessly adjust to Firefox's theme settings.
 #### Lightweight Design
 SimpleCookie operates without any background scripts or unnecessary components, ensuring smooth and efficient performance. It's minimalist to the extreme!
 #### Firefox API Integration
-Firefox's APIs are used to display and delete cookies. The extension requires permissions for "cookies" and "<all_urls>" (needed to support the unique ordering scheme that consolidates subdomains under a single main domain).
+Firefox's APIs are used to display and delete cookies. The extension requires permissions for "cookies" and "<all_urls>" (needed to support the unique ordering scheme that consolidates subdomains under a single main domain, until I find another way to do it!).
