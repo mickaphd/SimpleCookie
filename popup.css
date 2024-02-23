@@ -1,0 +1,50 @@
+/* SimpleCookie, a minimalist cookie manager for Firefox */
+/* Made with ❤ by micka */
+
+/* General styles */
+body {
+  font-family: Arial, 'Arial Light', sans-serif;
+  font-size: 14px;
+}
+
+/* Cookies container styles */
+#cookies-container {
+  margin-bottom: 0px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Cookies list styles */
+#cookies-container div {
+  text-align: left;
+  margin-bottom: 2px;
+  border-radius: 3px;
+  padding: 2px 5px;
+  color: var(--text-color);
+}
+
+/* Hover effect for the list items */
+#cookies-container div:hover {
+  background-color: var(--highlight-color);
+  cursor: pointer;
+}
+
+/* Light theme */
+:root {
+  --background-color: #FFFFFF;
+  --text-color: #000000;
+  --highlight-color: #DFDFE4; 
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #42414C;
+    --text-color: #FCFCFF;
+    --highlight-color: #5F5E68; 
+  }
+}
+
+body {
+  background-color: var(--background-color);
+}
