@@ -20,7 +20,7 @@
 <h2>Key features</h2>
 
 1. <b>Domain aggregation:</b> SimpleCookie aggregates cookie data, showing only the main domains for greater clarity. For example, if you have 5 cookies for "mail.proton.me" and 4 cookies for "drive.proton.me", then SimpleCookie will show "proton.me (9)", consolidating data from all subdomains under the main domain.
-1. <b>Organized list:</b> The list of websites storing cookies is neatly arranged alphabetically for easy navigation and quick access.
+1. <b>Organized list:</b> The list of websites storing cookies is neatly arranged alphabetically for easy navigation and quick access. Websites that store cookies and still have a tab open are highlighted.
 1. <b>Effortless cookie removal:</b> A single click on a website automatically deletes all cookies associated with that domain.
 1. <b>Real-time updates:</b> The number of cookies associated with each domain is shown in brackets and the pop-up is dynamically updated each time you open it and each time you clear cookies.
 1. <b>Detailed view:</b> Right-clicking on a domain opens a new window with a table showing more information about the cookies associated with that site.
