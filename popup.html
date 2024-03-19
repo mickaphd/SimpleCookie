@@ -1,13 +1,22 @@
-<!-- SimpleCookie, a minimalist cookie manager for Firefox -->
+<!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
 <!-- Made with ❤ by micka -->
 
 <html>
 <head>
   <title>SimpleCookie</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <link rel="stylesheet" href="popup.css">
   <script src="popup.js"></script>
 </head>
 <body>
-  <div id="cookies-container"></div>
+  <div id="popup">
+    <div id="cookies-container"></div>
+    <div id="separator"></div>
+    <div id="icons-container">
+      <i id="icon1" class="fas fa-history" title="&#9888  Delete browsing and download history"></i>
+      <i id="icon2" class="fas fa-cookie-bite" title="&#9888 &#9888  Delete all cookies"></i>
+      <i id="icon3" class="fas fa-dumpster" title="&#9888 &#9888 &#9888  Delete all browsing data, including cache, cookies, form data, browsing history, IndexedDB data, local storage and downloaded files"></i>
+    </div>
+  </div>
 </body>
 </html>

@@ -1,8 +1,11 @@
-/* SimpleCookie, a minimalist cookie manager for Firefox */
+/* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-// Fetches all cookies using the browser API
+
+// Function to fetch and display cookies per website domain
 async function displayCookies() {
+  
+  // Fetch all cookies
   const cookies = await browser.cookies.getAll({});
   
   // Count the number of cookies per website domain
@@ -25,12 +28,12 @@ async function displayCookies() {
       const element = document.createElement('div');
       element.textContent = `${website} (${count})`;
       
-      // Event listener to delete cookies of the main domain on click and refresh the display after deleting
+      // Event listener to delete cookies of the main domain on left-click and refresh the display after deleting
       element.addEventListener('click', async (event) => {
         event.preventDefault();
         const mainDomain = website.split('.')[0];
         await deleteCookiesWithMainDomain(cookies, mainDomain);
-        displayCookies(); 
+        displayCookies(); // Refresh the display after deleting cookies
       });
 
       // Event listener to display detailed cookie information on right-click
@@ -47,13 +50,16 @@ async function displayCookies() {
   container.append(...elements);
 }
 
+
 // Function to delete cookies with a specific main domain
 async function deleteCookiesWithMainDomain(cookies, mainDomain) {
+  
   // Filter cookies to find those belonging to the main domain
   const cookiesToDelete = cookies.filter(cookie => cookie.domain.includes(mainDomain));
   
   // Delete each cookie by its name and associated URLs
   await Promise.all(cookiesToDelete.map(async cookie => {
+    
     // Find URLs associated with the cookie
     const urls = cookiesToDelete
       .filter(c => c.name === cookie.name)
@@ -64,39 +70,36 @@ async function deleteCookiesWithMainDomain(cookies, mainDomain) {
   }));
 }
 
-// Function to display detailed information of cookies for a specific main domain
+
+// Function to display detailed information of cookies for a specific main domain in a new window
 async function displayCookieDetails(mainDomain, cookies) {
-  // Filter cookies to find those belonging to the main domain
-  const cookiesInMainDomain = cookies.filter(cookie => cookie.domain.includes(mainDomain));
-
-  // Create a table to display cookie details
+  const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
   const table = document.createElement('table');
-  // Styling for the table
-  table.style.borderCollapse = 'collapse';
-  table.style.fontFamily = 'Arial, sans-serif';
-  table.style.fontSize = '14px';
-  table.style.color = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'white' : 'black'; // Font color based on color scheme
+  table.style.cssText = `
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: ${isDarkMode ? 'white' : 'black'};
+  `;
 
-  // Define headers for the table
   const headers = [
     { title: 'Name', description: 'Name of the cookie' },
     { title: 'Value', description: 'Data stored within the cookie' },
     { title: 'Domain', description: 'The domain associated with the cookie' },
-    { title: 'Secure Flag', description: 'Indicate whether the cookie is secure or not. Secure cookies are only sent over HTTPS connections, adding an extra layer of security' },
-    { title: 'HttpOnly Flag', description: 'Show whether the HttpOnly flag is set for each cookie. HttpOnly cookies cannot be accessed through client-side scripts, enhancing security against cross-site scripting attacks' },
-    { title: 'SameSite Attribute', description: 'Include the SameSite attribute value for each cookie. This attribute helps prevent cross-site request forgery (CSRF) attacks by controlling how cookies are sent with cross-site requests' }
+    { title: 'Secure Flag', description: 'Indicate whether the cookie is secure or not.' },
+    { title: 'HttpOnly Flag', description: 'Show whether the HttpOnly flag is set for each cookie.' },
+    { title: 'SameSite Attribute', description: 'Include the SameSite attribute value for each cookie.' }
   ];
 
-  // Styling for the table headers
   const headerStyle = {
     padding: '12px',
     border: '1px solid #ddd',
     textAlign: 'left',
-    backgroundColor: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#333' : '#f2f2f2',
-    color: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'white' : 'black'
+    backgroundColor: isDarkMode ? '#333' : '#f2f2f2',
+    color: isDarkMode ? 'white' : 'black'
   };
 
-  // Function to create a header cell with specified title and description
   const createHeaderCell = (title, description) => {
     const header = document.createElement('th');
     header.textContent = title;
@@ -105,7 +108,6 @@ async function displayCookieDetails(mainDomain, cookies) {
     return header;
   };
 
-  // Function to create a data cell with specified value, type, and extra information
   const createDataCell = (val, isValue, extraInfo) => {
     const cell = document.createElement('td');
     cell.textContent = extraInfo ? extraInfo : val;
@@ -113,26 +115,55 @@ async function displayCookieDetails(mainDomain, cookies) {
     return cell;
   };
 
-  // Create the header row for the table
+  const fragment = document.createDocumentFragment();
   const headerRow = table.insertRow();
   headers.forEach(({ title, description }) => {
     headerRow.appendChild(createHeaderCell(title, description));
   });
 
-  // Populate the table with data for each cookie in the main domain
-  cookiesInMainDomain.forEach(cookie => {
+  cookies.filter(cookie => cookie.domain.includes(mainDomain)).forEach(cookie => {
     const row = table.insertRow();
     const { name, value, domain, secure, httpOnly, sameSite } = cookie;
     [name, value, domain, secure, httpOnly, sameSite].forEach((val, index) => {
-        row.appendChild(createDataCell(val, index === 1, val));
+      row.appendChild(createDataCell(val, index === 1, val));
     });
   });
 
-  // Open a new window to display the detailed cookie information
   const newWindow = window.open();
   newWindow.document.body.style.backgroundColor = 'transparent';
   newWindow.document.body.appendChild(table);
 }
 
+
 // Event listener to trigger the display of cookies when the DOM content is loaded
-document.addEventListener('DOMContentLoaded', displayCookies);
+document.addEventListener('DOMContentLoaded', async function() {
+    await displayCookies();
+    
+    // Function to remove browsing data and refresh the display of cookies
+async function removeBrowsingData(options) {
+    await browser.browsingData.remove({ since: 0 }, options);
+    await displayCookies();
+}
+
+
+document.getElementById('icon1').addEventListener('click', async function() {
+    await removeBrowsingData({ history: true, downloads: true });
+});
+
+document.getElementById('icon2').addEventListener('click', async function() {
+    await removeBrowsingData({ cookies: true });
+});
+
+document.getElementById('icon3').addEventListener('click', async function() {
+    await removeBrowsingData({
+        cache: true,
+        cookies: true,
+        formData: true,
+        history: true,
+        indexedDB: true,
+        localStorage: true,
+        downloads: true,
+    });
+});
+        
+});
