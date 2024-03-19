@@ -34,8 +34,7 @@ async function displayCookies() {
 
             // Highlight the main domain if it matches an open tab
             if (openTabUrls.some(tabUrl => tabUrl.includes(website))) {
-                element.style.fontWeight = 'bold';
-                 element.style.color = '#00D976';
+                element.style.color = '#04A65D';
             }
 
             // Add event listeners for deleting cookies and displaying details
