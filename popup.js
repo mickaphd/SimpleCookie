@@ -4,50 +4,59 @@
 
 // Function to fetch and display cookies per website domain
 async function displayCookies() {
-  
-  // Fetch all cookies
-  const cookies = await browser.cookies.getAll({});
-  
-  // Count the number of cookies per website domain
-  const websiteCounts = cookies.reduce((acc, cookie) => {
-    
-    // Extract the main domain from the cookie domain
-    const website = cookie.domain.replace(/^www\.|^.*?([^\.]+\.[^\.]+)$/, '\$1');
-    acc[website] = (acc[website] || 0) + 1;
-    return acc;
-  }, {});
 
-  // Get the container element to display cookies
-  const container = document.getElementById('cookies-container');
-  container.innerHTML = '';
-  
-  // Create elements to display each website and its cookie count
-  const elements = Object.entries(websiteCounts)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([website, count]) => {
-      const element = document.createElement('div');
-      element.textContent = `${website} (${count})`;
-      
-      // Event listener to delete cookies of the main domain on left-click and refresh the display after deleting
-      element.addEventListener('click', async (event) => {
-        event.preventDefault();
-        const mainDomain = website.split('.')[0];
-        await deleteCookiesWithMainDomain(cookies, mainDomain);
-        displayCookies(); // Refresh the display after deleting cookies
-      });
+    // Fetch all cookies and open tabs
+    const cookies = await browser.cookies.getAll({});
+    const tabs = await browser.tabs.query({});
 
-      // Event listener to display detailed cookie information on right-click
-      element.addEventListener('contextmenu', async (event) => {
-        event.preventDefault();
-        const mainDomain = website.split('.')[0];
-        await displayCookieDetails(mainDomain, cookies);
-      });
-      
-      return element;
-    });
+    // Extract hostnames of open tabs
+    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
 
-  // Append the elements to the container for display
-  container.append(...elements);
+    // Get the container element where cookies will be displayed
+    const container = document.getElementById('cookies-container');
+    container.innerHTML = '';
+
+    // Count the number of cookies per website domain
+    const websiteCounts = cookies.reduce((acc, cookie) => {
+        
+        // Extract the website domain from the cookie domain
+        const website = cookie.domain.replace(/^www\.|^.*?([^\.]+\.[^\.]+)$/, '\$1');
+        acc[website] = (acc[website] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Create elements to display each website domain and cookie count
+    const elements = Object.entries(websiteCounts)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([website, count]) => {
+            const element = document.createElement('div');
+            element.textContent = `${website} (${count})`;
+
+            // Highlight the main domain if it matches an open tab
+            if (openTabUrls.some(tabUrl => tabUrl.includes(website))) {
+                element.style.fontWeight = 'bold';
+                 element.style.color = '#00D976';
+            }
+
+            // Add event listeners for deleting cookies and displaying details
+            element.addEventListener('click', async (event) => {
+                event.preventDefault();
+                const mainDomain = website.split('.')[0];
+                await deleteCookiesWithMainDomain(cookies, mainDomain);
+                displayCookies();
+            });
+
+            element.addEventListener('contextmenu', async (event) => {
+                event.preventDefault();
+                const mainDomain = website.split('.')[0];
+                await displayCookieDetails(mainDomain, cookies);
+            });
+
+            return element;
+        });
+
+    // Append the elements to the container for display
+    container.append(...elements);
 }
 
 
