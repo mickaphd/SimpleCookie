@@ -11,7 +11,7 @@
 /* Default font and background color */
 body {
     padding-top: 0px;
-    font-family: 'Arial Light', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13.5px;
     background-color: var(--background-color);
 }
@@ -90,7 +90,7 @@ body {
     margin-bottom: 2px;
     cursor: pointer;
     opacity: 0.2;
-    transition: opacity;
+    transition: opacity 0.1s;
 }
 
 #icons-container i:hover {

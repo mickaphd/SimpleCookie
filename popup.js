@@ -1,10 +1,8 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-
 // Function to fetch and display cookies per website domain
 async function displayCookies() {
-
     // Fetch all cookies and open tabs
     const cookies = await browser.cookies.getAll({});
     const tabs = await browser.tabs.query({});
@@ -18,10 +16,9 @@ async function displayCookies() {
 
     // Count the number of cookies per website domain
     const websiteCounts = cookies.reduce((acc, cookie) => {
-        
-        // Extract the website domain from the cookie domain
-        const website = cookie.domain.replace(/^www\.|^.*?([^\.]+\.[^\.]+)$/, '\$1');
-        acc[website] = (acc[website] || 0) + 1;
+        // Extract the main domain from the cookie domain
+        const mainDomain = cookie.domain.replace(/^(?:.*\.)?([^.]+\.[^.]+)$/, '\$1');
+        acc[mainDomain] = (acc[mainDomain] || 0) + 1;
         return acc;
     }, {});
 
@@ -40,14 +37,14 @@ async function displayCookies() {
             // Add event listeners for deleting cookies and displaying details
             element.addEventListener('click', async (event) => {
                 event.preventDefault();
-                const mainDomain = website.split('.')[0];
+                const mainDomain = website;
                 await deleteCookiesWithMainDomain(cookies, mainDomain);
                 displayCookies();
             });
 
             element.addEventListener('contextmenu', async (event) => {
                 event.preventDefault();
-                const mainDomain = website.split('.')[0];
+                const mainDomain = website;
                 await displayCookieDetails(mainDomain, cookies);
             });
 
@@ -82,14 +79,24 @@ async function deleteCookiesWithMainDomain(cookies, mainDomain) {
 // Function to display detailed information of cookies for a specific main domain in a new window
 async function displayCookieDetails(mainDomain, cookies) {
   const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  
+
   const table = document.createElement('table');
   table.style.cssText = `
     border-collapse: collapse;
-    font-family: Arial, sans-serif;
     font-size: 14px;
     color: ${isDarkMode ? 'white' : 'black'};
   `;
+
+  // Dynamically set the font-family based on the operating system
+  if (navigator.platform.includes('Mac')) {
+    table.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif';
+  } else if (navigator.platform.includes('Win')) {
+    table.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+  } else if (navigator.platform.includes('Linux')) {
+    table.style.fontFamily = 'Ubuntu, Arial, sans-serif';
+  } else {
+    table.style.fontFamily = 'Arial, sans-serif'; // Default font family
+  }
 
   const headers = [
     { title: 'Name', description: 'Name of the cookie' },
@@ -143,26 +150,57 @@ async function displayCookieDetails(mainDomain, cookies) {
 }
 
 
+// Function to categorize cookies associated with closed tabs
+function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
+    return cookies.filter(cookie => {
+        const cookieDomain = cookie.domain.replace(/^www\.|^.*?([^\.]+\.[^\.]+)$/, '\$1');
+        return !openTabUrls.some(tabUrl => tabUrl.includes(cookieDomain));
+    });
+}
+
+
+// Function to delete cookies
+async function deleteCookies(cookies) {
+    for (const cookie of cookies) {
+        await browser.cookies.remove({ url: "http" + (cookie.secure ? "s" : "") + "://" + cookie.domain + cookie.path, name: cookie.name });
+    }
+}
+
+
 // Event listener to trigger the display of cookies when the DOM content is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     await displayCookies();
-    
-    // Function to remove browsing data and refresh the display of cookies
+
+
+// Function to remove browsing data and refresh the display of cookies
 async function removeBrowsingData(options) {
     await browser.browsingData.remove({ since: 0 }, options);
     await displayCookies();
 }
 
+    // Icon 1
+    document.getElementById('icon1').addEventListener('click', async function() {
+        const cookies = await browser.cookies.getAll({});
+        const tabs = await browser.tabs.query({});
+    
+        const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+    
+        const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
+    
+        // Delete cookies associated with closed tabs
+        await deleteCookies(cookiesAssociatedWithClosedTabs);
+    
+        // Refresh the display of cookies
+        await displayCookies();
+    });
 
-document.getElementById('icon1').addEventListener('click', async function() {
-    await removeBrowsingData({ history: true, downloads: true });
-});
-
-document.getElementById('icon2').addEventListener('click', async function() {
+    // Icon 2
+    document.getElementById('icon2').addEventListener('click', async function() {
     await removeBrowsingData({ cookies: true });
 });
 
-document.getElementById('icon3').addEventListener('click', async function() {
+    // Icon 3
+    document.getElementById('icon3').addEventListener('click', async function() {
     await removeBrowsingData({
         cache: true,
         cookies: true,
@@ -171,7 +209,6 @@ document.getElementById('icon3').addEventListener('click', async function() {
         indexedDB: true,
         localStorage: true,
         downloads: true,
+        });
     });
-});
-        
 });
