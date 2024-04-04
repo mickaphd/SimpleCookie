@@ -6,13 +6,13 @@
 <i>A minimalist yet efficient cookie manager for Firefox</i>
 
 <h2>Main popup</h2>
-<img width="250" alt="Screenshot 2024-03-26 at 08 52 55" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/c5478cac-5ec6-4cc0-b1ae-68cd775aace5">
-<img width="250" alt="Screenshot 2024-03-26 at 08 53 16" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/90986ce7-6bdc-41f7-8e21-cd5d1188fc2e">
+<img width="250" alt="Screenshot 2024-03-26 at 08 52 55" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/ebd22607-8917-4913-b779-95a5c88f6550">
+<img width="250" alt="Screenshot 2024-03-26 at 08 53 16" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/91a9cb3c-bdcc-4d4e-9670-3ccc268af0bd">
 
-<h2>Detailed window</h2>
+<h2>Detailed view</h2>
 
-<img width="600" alt="SimpleCookie_light-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/341cc546-d70a-4842-a578-d72999cc065b">
-<img width="600" alt="SimpleCookie_dark-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/2f09cf56-6652-402d-9a85-13db6ee54c63">
+<img width="450" alt="SimpleCookie_light-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/429f7a5c-9e3b-47ce-b010-853631e020ab">
+<img width="450" alt="SimpleCookie_dark-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/e11d5dea-3e02-4e33-9eb1-a269327ebccc">
 
 <h2>Key features</h2>
 
