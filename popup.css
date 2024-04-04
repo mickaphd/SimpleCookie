@@ -1,7 +1,8 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-/* Reset default styles */
+
+/* Default style */
 * {
     margin: 0;
     padding: 0;
@@ -70,7 +71,7 @@ body {
 /* Separator */
 #separator {
     width: 100%;
-    border-top: 2px solid #ccc;
+    border-top: 1.5px solid #ccc;
     margin-top: 5px;
     opacity: 0.2;
 }
