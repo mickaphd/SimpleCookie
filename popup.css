@@ -1,7 +1,6 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-
 /* Default style */
 * {
     margin: 0;
@@ -11,17 +10,17 @@
 
 /* Default font and background color */
 body {
-    padding-top: 0px;
+    padding-top: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13.5px;
     background-color: var(--background-color);
 }
 
-/* Cookies container */
+/* Cookies container style */
 #cookies-container {
     overflow: hidden; 
+    margin-top: 0px;
     margin-bottom: 0;
-    margin-top: 5px;
     max-height: 500px;
     max-width: auto;
     overflow-y: auto;
@@ -31,7 +30,7 @@ body {
 #cookies-container div {
     text-align: left;
     margin-bottom: 0;
-    border-radius: 0px;
+    border-radius: 0;
     padding: 2px 5px;
     color: var(--text-color);
 }
@@ -41,7 +40,7 @@ body {
     cursor: pointer;
 }
 
-/* Theme settings */
+/* Light and dark theme settings */
 :root {
     --background-color: #FFFFFF;
     --text-color: #000000;
@@ -68,32 +67,36 @@ body {
     }
 }
 
-/* Separator */
+/* Horizontal separator */
 #separator {
     width: 100%;
     border-top: 1.5px solid #ccc;
-    margin-top: 5px;
-    opacity: 0.2;
+    margin-top: 0px;
+    opacity: 0.3;
 }
 
-/* Icons styling */
+/* Bottom icons style */
 #icons-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 4px;
+    margin-bottom: 4px;
 }
 
 #icons-container i {
     margin: 0 10px;
-    margin-top: 2px;
-    margin-bottom: 2px;
     cursor: pointer;
     opacity: 0.2;
-    transition: opacity 0.1s;
+    transition: opacity 0.1s, transform 0.3s;
 }
 
 #icons-container i:hover {
     opacity: 1;
+    transform: scale(1.3);
+}
+
+/* Special color for the icon3 */
+#icon3:hover::before {
+    color:#FE0179;
 }

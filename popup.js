@@ -1,40 +1,64 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
+// Array to store tracking sites
+let trackingSites = [];
+
+// Fetches the tracker database and populates the trackingSites array
+// Special thanks to Ghostery Tracker Database (https://github.com/ghostery/trackerdb) for providing the data
+async function fetchTrackerDB() {
+    if (trackingSites.length === 0) {
+        const response = await fetch(browser.runtime.getURL('trackerdb.txt'));
+        const text = await response.text();
+        trackingSites = text.split('\n').map(domain => domain.trim());
+    }
+    return trackingSites;
+}
+
+// Initializes the extension by fetching the tracker database and displaying cookies
+async function initExtension() {
+    await fetchTrackerDB();
+    displayCookies();
+}
+
+// Update the display of cookies to indicate tracking sites with a ghost icon
+function updateCookieDisplay(element, domain) {
+    if (trackingSites.includes(domain)) {
+        const icon = document.createElement('span');
+        icon.classList.add('fas', 'fa-ghost');
+        icon.style.opacity = '0.6';
+        icon.style.fontSize = '0.9em';
+        element.appendChild(document.createTextNode(' '));
+        element.appendChild(icon);
+    }
+}
+
 // Function to fetch and display cookies per website domain
 async function displayCookies() {
-    // Fetch all cookies and open tabs
     const cookies = await browser.cookies.getAll({});
     const tabs = await browser.tabs.query({});
-
-    // Extract hostnames of open tabs
     const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-
-    // Get the container element where cookies will be displayed
     const container = document.getElementById('cookies-container');
     container.innerHTML = '';
 
-    // Count the number of cookies per website domain
     const websiteCounts = cookies.reduce((acc, cookie) => {
-        // Extract the main domain from the cookie domain
         const mainDomain = cookie.domain.replace(/^(?:.*\.)?([^.]+\.[^.]+)$/, '\$1');
         acc[mainDomain] = (acc[mainDomain] || 0) + 1;
         return acc;
     }, {});
 
-    // Create elements to display each website domain and cookie count
     const elements = Object.entries(websiteCounts)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([website, count]) => {
             const element = document.createElement('div');
             element.textContent = `${website} (${count})`;
 
-            // Highlight the main domain if it matches an open tab
+            updateCookieDisplay(element, website);
+
             if (openTabUrls.some(tabUrl => tabUrl.includes(website))) {
                 element.style.color = '#04A65D';
             }
 
-            // Add event listeners for deleting cookies and displaying details
             element.addEventListener('click', async (event) => {
                 event.preventDefault();
                 const mainDomain = website;
@@ -51,29 +75,37 @@ async function displayCookies() {
             return element;
         });
 
-    // Append the elements to the container for display
     container.append(...elements);
 }
 
+// Event listener to trigger the initialization of the extension
+document.addEventListener('DOMContentLoaded', initExtension);
+
 // Function to delete cookies with a specific main domain
 async function deleteCookiesWithMainDomain(cookies, mainDomain) {
-    // Filter cookies to find those belonging to the main domain
     const cookiesToDelete = cookies.filter(cookie => cookie.domain.includes(mainDomain));
-
-    // Delete each cookie by its name and associated URLs
     await Promise.all(cookiesToDelete.map(async cookie => {
-        // Find URLs associated with the cookie
         const urls = cookiesToDelete
             .filter(c => c.name === cookie.name)
             .map(c => (c.secure ? "https://" : "http://") + c.domain + c.path);
-
-        // Remove the cookie from each URL
         await Promise.all(urls.map(url => browser.cookies.remove({ url: url, name: cookie.name })));
   }));
 }
 
+// Function to hide the horizontal separator if the cookie container is empty
+document.addEventListener("DOMContentLoaded", function() {
+    const cookiesContainer = document.getElementById("cookies-container");
+    const separator = document.getElementById("separator");
+    const toggleSeparatorVisibility = () => {
+        separator.style.display = cookiesContainer.children.length === 0 ? "none" : "block";
+    };
+    toggleSeparatorVisibility();
+    new MutationObserver(toggleSeparatorVisibility).observe(cookiesContainer, { childList: true });
+});
+
 // Function to display cookie details in a table format
 async function displayCookieDetails(mainDomain, cookies) {
+
     // Check if dark mode is enabled
     const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -92,10 +124,10 @@ async function displayCookieDetails(mainDomain, cookies) {
     const headers = [
         { title: 'Name', description: 'The name of the cookie, which is used to identify it when sent between the client and the server' },
         { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie' },
-        { title: 'Size', description: 'An estimated size of the cookie in bytes using a function that encodes the cookie name, value and additional information' },
+        { title: 'Size', description: 'An "estimated" size of the cookie in bytes using a function that encodes the cookie name, value and additional information' },
         { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains' },
-        { title: 'Expiration Date', description: 'The date and time when the cookie will expire. After this time, the cookie will no longer be sent by the browser to the server. An incorrect date likely signifies a session cookie' },
-        { title: 'Secure Flag', description: 'If this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security' },
+        { title: 'Expiration Date', description: 'The date and time when the cookie will expire. After this time, the cookie will no longer be sent by the browser to the server. An "invalid date" likely signifies a session cookie' },
+        { title: 'Secure Flag', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security' },
         { title: 'HttpOnly Flag', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks' },
         { title: 'SameSite Attribute', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts' }
     ];
@@ -148,11 +180,7 @@ function calculateCookieSize(cookie) {
     const value = encodeURIComponent(cookie.value);
     const metadata = `;domain=${cookie.domain};expires=${cookie.expirationDate};secure=${cookie.secure};httponly=${cookie.httpOnly};samesite=${cookie.sameSite}`;
     const cookieString = `${name}=${value}${metadata}`;
-
-    // Convert the cookie string to UTF-8 encoded bytes
     const bytes = new TextEncoder().encode(cookieString);
-
-    // Return the size of the cookie in bytes
     return bytes.length;
 }
 
@@ -181,7 +209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         await displayCookies();
     }
 
-    // Icon 1
+    // Icon 1 function
     document.getElementById('icon1').addEventListener('click', async function() {
         const cookies = await browser.cookies.getAll({});
         const tabs = await browser.tabs.query({});
@@ -195,21 +223,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         await displayCookies();
     });
 
-    // Icon 2
+    // Icon 2 function
     document.getElementById('icon2').addEventListener('click', async function() {
         await removeBrowsingData({ cookies: true });
     });
 
-    // Icon 3
+    // Icon 3 function
     document.getElementById('icon3').addEventListener('click', async function() {
         await removeBrowsingData({
             cache: true,
             cookies: true,
+            downloads: true,
             formData: true,
             history: true,
             indexedDB: true,
             localStorage: true,
-            downloads: true,
+            passwords: true,
+            pluginData: true,
+            serviceWorkers: true,
         });
     });
+
+    // Icon 4 function
+    document.getElementById('icon4').addEventListener('click', function() {
+    	window.open('https://github.com/mickaphd/SimpleCookie', '_blank');
+    });
+
 });
