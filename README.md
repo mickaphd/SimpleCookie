@@ -6,8 +6,8 @@
 <i>A minimalist yet efficient cookie manager for Firefox</i>
 
 <h2>Main popup</h2>
-<img width="250" alt="Screenshot 2024-03-26 at 08 52 55" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/a9833fea-724c-4575-9443-151b3c949e32">
-<img width="250" alt="Screenshot 2024-03-26 at 08 53 16" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/3711fd19-a22c-453d-af31-e65ca6016716">
+<img width="250" alt="Screenshot 2024-03-26 at 08 52 55" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/724eb7fc-245e-4d38-90fd-c6fd1c8d1ae3">
+<img width="250" alt="Screenshot 2024-03-26 at 08 53 16" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/f5ddf7a9-5c78-4a5f-866a-31e13ffdf519">
 
 <h2>Detailed view</h2>
 
