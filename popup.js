@@ -1,29 +1,37 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-// Array to store tracking sites
-let trackingSites = [];
+// Set to store tracking sites, arrays to store cookies, and open browser tabs
+let trackingSites = new Set();
+let cookies = [];
+let tabs = [];
 
-// Fetches the tracker database and populates the trackingSites array
-// Special thanks to Ghostery Tracker Database (https://github.com/ghostery/trackerdb) for providing the data
+// Fetches the tracker database and populates the trackingSites Set
 async function fetchTrackerDB() {
-    if (trackingSites.length === 0) {
+    if (trackingSites.size === 0) {
         const response = await fetch(browser.runtime.getURL('trackerdb.txt'));
         const text = await response.text();
-        trackingSites = text.split('\n').map(domain => domain.trim());
+        trackingSites = new Set(text.split('\n').map(domain => domain.trim()));
     }
     return trackingSites;
+}
+
+// Fetches the current cookies and tabs data from the browser
+async function fetchCookiesAndTabs() {
+    cookies = await browser.cookies.getAll({});
+    tabs = await browser.tabs.query({});
 }
 
 // Initializes the extension by fetching the tracker database and displaying cookies
 async function initExtension() {
     await fetchTrackerDB();
+    await fetchCookiesAndTabs();
     displayCookies();
 }
 
 // Update the display of cookies to indicate tracking sites with a ghost icon
 function updateCookieDisplay(element, domain) {
-    if (trackingSites.includes(domain)) {
+    if (trackingSites.has(domain)) {
         const icon = document.createElement('span');
         icon.classList.add('fas', 'fa-ghost');
         icon.style.opacity = '0.6';
@@ -34,19 +42,21 @@ function updateCookieDisplay(element, domain) {
 }
 
 // Function to fetch and display cookies per website domain
-async function displayCookies() {
-    const cookies = await browser.cookies.getAll({});
-    const tabs = await browser.tabs.query({});
+function displayCookies() {
     const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
     const container = document.getElementById('cookies-container');
+    // Clear the container before populating it with updated data
     container.innerHTML = '';
 
+    // Count the number of cookies per website
     const websiteCounts = cookies.reduce((acc, cookie) => {
-        const mainDomain = cookie.domain.replace(/^(?:.*\.)?([^.]+\.[^.]+)$/, '\$1');
+        const mainDomain = getMainDomain(cookie.domain);
         acc[mainDomain] = (acc[mainDomain] || 0) + 1;
         return acc;
     }, {});
 
+    // Create and display elements for each website and its number of cookies
+    const fragment = document.createDocumentFragment();
     const elements = Object.entries(websiteCounts)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([website, count]) => {
@@ -55,31 +65,20 @@ async function displayCookies() {
 
             updateCookieDisplay(element, website);
 
+            // Highlight websites that are currently open in tabs
             if (openTabUrls.some(tabUrl => tabUrl.includes(website))) {
                 element.style.color = '#04A65D';
             }
 
-            element.addEventListener('click', async (event) => {
-                event.preventDefault();
-                const mainDomain = website;
-                await deleteCookiesWithMainDomain(cookies, mainDomain);
-                displayCookies();
-            });
-
-            element.addEventListener('contextmenu', async (event) => {
-                event.preventDefault();
-                const mainDomain = website;
-                await displayCookieDetails(mainDomain, cookies);
-            });
-
             return element;
         });
 
-    container.append(...elements);
-}
+    // Add the created elements to the fragment
+    fragment.append(...elements);
 
-// Event listener to trigger the initialization of the extension
-document.addEventListener('DOMContentLoaded', initExtension);
+    // Add the fragment to the container
+    container.appendChild(fragment);
+}
 
 // Function to delete cookies with a specific main domain
 async function deleteCookiesWithMainDomain(cookies, mainDomain) {
@@ -89,11 +88,55 @@ async function deleteCookiesWithMainDomain(cookies, mainDomain) {
             .filter(c => c.name === cookie.name)
             .map(c => (c.secure ? "https://" : "http://") + c.domain + c.path);
         await Promise.all(urls.map(url => browser.cookies.remove({ url: url, name: cookie.name })));
-  }));
+    }));
 }
 
-// Function to hide the horizontal separator if the cookie container is empty
-document.addEventListener("DOMContentLoaded", function() {
+// Event listener to trigger the initialization of the extension
+document.addEventListener('DOMContentLoaded', async function() {
+    await initExtension();
+
+    // Function to remove browsing data and refresh the display of cookies
+    async function removeBrowsingData(options) {
+        await browser.browsingData.remove({ since: 0 }, options);
+        await fetchCookiesAndTabs();
+        displayCookies();
+    }
+
+    // Icon 1 function: delete cookies associated with closed tabs and refresh display
+    document.getElementById('icon1').addEventListener('click', async function() {
+        const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+        const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
+
+        // Delete cookies associated with closed tabs
+        await deleteCookies(cookiesAssociatedWithClosedTabs);
+
+        // Refresh the display of cookies
+        await fetchCookiesAndTabs();
+        displayCookies();
+    });
+
+    // Icon 2 function: remove all cookies and refresh display
+    document.getElementById('icon2').addEventListener('click', async function() {
+        await removeBrowsingData({ cookies: true });
+    });
+
+    // Icon 3 function: remove all browsing data and refresh display
+    document.getElementById('icon3').addEventListener('click', async function() {
+        await removeBrowsingData({
+            cache: true,
+            cookies: true,
+            downloads: true,
+            formData: true,
+            history: true,
+            indexedDB: true,
+            localStorage: true,
+            passwords: true,
+            pluginData: true,
+            serviceWorkers: true,
+        });
+    });
+
+    // Function to hide the horizontal separator if the cookie container is empty
     const cookiesContainer = document.getElementById("cookies-container");
     const separator = document.getElementById("separator");
     const toggleSeparatorVisibility = () => {
@@ -101,9 +144,33 @@ document.addEventListener("DOMContentLoaded", function() {
     };
     toggleSeparatorVisibility();
     new MutationObserver(toggleSeparatorVisibility).observe(cookiesContainer, { childList: true });
+
+    // Event delegation for left-clicking and right-clicking
+    cookiesContainer.addEventListener('click', async (event) => {
+        if (event.target.nodeName === 'DIV') {
+            const website = event.target.textContent.split(' ')[0];
+            event.preventDefault();
+            await deleteCookiesWithMainDomain(cookies, website);
+            await fetchCookiesAndTabs();
+            displayCookies();
+        }
+    });
+
+    cookiesContainer.addEventListener('contextmenu', async (event) => {
+        if (event.target.nodeName === 'DIV') {
+            const website = event.target.textContent.split(' ')[0];
+            event.preventDefault();
+            await displayCookieDetails(website, cookies);
+        }
+    });
 });
 
-// Function to display cookie details in a table format
+// Helper function to extract the main domain from a cookie domain
+function getMainDomain(domain) {
+    return domain.replace(/^(?:.*\.)?([^.]+\.[^.]+)$/, '\$1');
+}
+
+// Function to display cookie details in a table format and a new window
 async function displayCookieDetails(mainDomain, cookies) {
 
     // Check if dark mode is enabled
@@ -198,55 +265,3 @@ async function deleteCookies(cookies) {
         await browser.cookies.remove({ url: "http" + (cookie.secure ? "s" : "") + "://" + cookie.domain + cookie.path, name: cookie.name });
     }
 }
-
-// Event listener to trigger the display of cookies when the DOM content is loaded
-document.addEventListener('DOMContentLoaded', async function() {
-    await displayCookies();
-
-    // Function to remove browsing data and refresh the display of cookies
-    async function removeBrowsingData(options) {
-        await browser.browsingData.remove({ since: 0 }, options);
-        await displayCookies();
-    }
-
-    // Icon 1 function
-    document.getElementById('icon1').addEventListener('click', async function() {
-        const cookies = await browser.cookies.getAll({});
-        const tabs = await browser.tabs.query({});
-        const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-        const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-
-        // Delete cookies associated with closed tabs
-        await deleteCookies(cookiesAssociatedWithClosedTabs);
-
-        // Refresh the display of cookies
-        await displayCookies();
-    });
-
-    // Icon 2 function
-    document.getElementById('icon2').addEventListener('click', async function() {
-        await removeBrowsingData({ cookies: true });
-    });
-
-    // Icon 3 function
-    document.getElementById('icon3').addEventListener('click', async function() {
-        await removeBrowsingData({
-            cache: true,
-            cookies: true,
-            downloads: true,
-            formData: true,
-            history: true,
-            indexedDB: true,
-            localStorage: true,
-            passwords: true,
-            pluginData: true,
-            serviceWorkers: true,
-        });
-    });
-
-    // Icon 4 function
-    document.getElementById('icon4').addEventListener('click', function() {
-    	window.open('https://github.com/mickaphd/SimpleCookie', '_blank');
-    });
-
-});

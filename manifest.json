@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "SimpleCookie",
-  "version": "1.7",
+  "version": "1.8",
   "description": "A minimalist yet efficient cookie manager for Firefox",
   "permissions": [
     "browsingData",
