@@ -14,6 +14,10 @@
 <img width="450" alt="SimpleCookie_light-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/429f7a5c-9e3b-47ce-b010-853631e020ab">
 <img width="450" alt="SimpleCookie_dark-theme_detailed information" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/e11d5dea-3e02-4e33-9eb1-a269327ebccc">
 
+<h2>Settings</h2>
+<img width="550" alt="Settings_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/57c0317a-0e89-4900-88ed-bee72294d5a5">
+<img width="550" alt="Settings_dark" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/99a3533c-dcc3-46be-9e7a-66c4a1d12d0c">
+  
 <h2>Key features</h2>
 
 1. <b>Domain aggregation:</b> SimpleCookie aggregates cookie data, showing only the main domains for greater clarity. For example, if you have 5 cookies for "mail.proton.me" and 4 cookies for "drive.proton.me", then SimpleCookie will show "proton.me (9)", consolidating data from all subdomains under the main domain. You can also tweak the way SimpleCookie extracts the main domain in the settings.
