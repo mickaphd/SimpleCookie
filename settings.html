@@ -3,24 +3,59 @@
 
 <html>
 <head>
-  <title>SimpleCookie</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <style>
-    body 
-    .toggle-icon {
-      cursor: pointer;
-      font-size: 25px;
-      vertical-align: middle;
-    }
-  </style>
+    <title>SimpleCookie</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        .icon-text {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .icon-text i {
+            margin-right: 5px;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        /* Tooltip container */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px; /* Adjust the margin as needed */
+        }
+
+        /* Tooltip text */
+        .tooltip .tooltiptext {
+            display: none;
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            z-index: 1;
+        }
+
+        /* Show the tooltip text when you mouse over the tooltip container */
+        .tooltip:hover .tooltiptext {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-  <div>
-    <label>
-      <i id="setting1" class="fas fa-toggle-off toggle-icon" data-setting="setting1"></i>
-      <span style="vertical-align: middle;">Get notified when a cookie is deleted</span>
-    </label>
-  </div>
-  <script src="settings.js"></script>
+    <h3 class="icon-text"><i class="fa-solid fa-screwdriver-wrench"></i>Settings</h3>
+    <div class="tooltip">
+        Select the level of main domain extraction from -1 to -4 (-2 is used by default)
+        <i class="fa-solid fa-info-circle"></i>
+        <span class="tooltiptext">For example, with a value of -2, SimpleCookie won't distinguish between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to test and choose what works best for you.</span>
+    </div>
+    <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
+    <script src="settings.js"></script>
 </body>
 </html>

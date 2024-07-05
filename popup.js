@@ -47,10 +47,28 @@ function updateCookieDisplay(element, domain) {
 }
 
 
-// Function to extract the main domain of each cookie, up to 3 levels (e.g., "sub.example.co.uk" -> "example.co.uk")
+
+
+// Default number of levels for main domain extraction (Check SimpleCookie preferences for options)
+let numLevels = -2;
+
+// Function to extract the main domain of each cookie up to the specified number of levels
 function getMainDomain(domain) {
-    return domain.split('.').filter(part => part && part !== 'www').slice(-3).join('.');
+    return domain.split('.').filter(part => part && part !== 'www').slice(numLevels).join('.');
 }
+
+// Function to get the number of levels from storage and update the variable
+async function getNumLevels() {
+    const result = await browser.storage.local.get('numLevels');
+    if (result.numLevels !== undefined) {
+        numLevels = result.numLevels;
+    }
+}
+
+// Call getNumLevels to initialize the numLevels variable
+getNumLevels();
+
+
 
 
 // Function to check for an exact match between two domains or determines if one domain is a subdomain of the other (related to the green highlight function)

@@ -12,44 +12,28 @@ document.body.style.cssText = `
     color: ${isDarkMode ? '#FCFCFF' : '#000000'};
 `;
 
-// Settings
-document.addEventListener('DOMContentLoaded', async function() {
-  const toggleIcons = document.querySelectorAll('.toggle-icon');
+// Function to set the number of levels for main domain extraction
+async function setNumLevels(levels) {
+    numLevels = levels;
+    await browser.storage.local.set({ numLevels: levels });
+}
 
-  // Function to handle click events on toggle icons
-  const handleClick = async function() {
-    const setting = this.getAttribute('data-setting');
+// Default number of levels for main domain extraction
+let numLevels = -2;
 
-    // Retrieve current settings from local storage
-    const settings = await browser.storage.local.get(['setting1', 'setting2', 'setting3']);
-    const value = !settings[setting];
-
-    // Update the setting in local storage
-    await browser.storage.local.set({ [setting]: value });
-
-    // Update the icon appearance based on the new setting value
-    this.className = value ? 'fas fa-toggle-on toggle-icon' : 'fas fa-toggle-off toggle-icon';
-
-    // Setting 1: If toggled, update the cookies.onChanged listener
-    if (setting === 'setting1') {
-      if (value) {
-        browser.cookies.onChanged.addListener(handleCookieChangeNotification);
-      } else {
-        browser.cookies.onChanged.removeListener(handleCookieChangeNotification);
-      }
-    }
-  };
-
-  // Add click event listener to each toggle icon
-  toggleIcons.forEach(icon => {
-    icon.addEventListener('click', handleClick);
-  });
-
-  // Initialize settings based on stored values
-  const settings = await browser.storage.local.get(['setting1', 'setting2', 'setting3']);
-
-  // Set the initial state of the icons based on the stored settings
-  toggleIcons.forEach((icon, index) => {
-    icon.className = settings[`setting${index + 1}`] ? 'fas fa-toggle-on toggle-icon' : 'fas fa-toggle-off toggle-icon';
-  });
+// Function to update the value when the input changes
+document.getElementById('num-levels-input').addEventListener('input', function() {
+    setNumLevels(this.value);
 });
+
+// Function to get the number of levels from storage and update the variable
+async function getNumLevels() {
+    const result = await browser.storage.local.get('numLevels');
+    if (result.numLevels !== undefined) {
+        numLevels = result.numLevels;
+        document.getElementById('num-levels-input').value = numLevels;
+    }
+}
+
+// Call getNumLevels function to initialize the value on page load
+getNumLevels();
