@@ -1,18 +1,23 @@
 {
   "manifest_version": 2,
   "name": "SimpleCookie",
-  "version": "1.8",
+  "version": "1.9",
   "description": "A minimalist yet efficient cookie manager for Firefox",
   "permissions": [
     "browsingData",
     "cookies",
     "tabs",
-    "<all_urls>"
+    "<all_urls>",
+    "storage",
+    "notifications"
   ],
   "browser_action": {
     "default_popup": "popup.html"
   },
   "icons": {
     "48": "icon.png"
+  },
+  "options_ui": {
+    "page": "settings.html"
   }
 }

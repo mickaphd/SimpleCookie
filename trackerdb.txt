@@ -524,6 +524,7 @@ adspeed.net
 adspirit.de
 adspirit.net
 adsrevenue.net
+adsrvr.cn
 adsrvr.org
 adstage-analytics.herokuapp.com
 adstars.co.id
@@ -789,7 +790,6 @@ api.flocktory.com
 api.flyertown.ca
 api.fouanalytics.com
 api.genoo.com
-api.getchute.com
 api.getsentry.com
 api.giosg.com
 api.glia.com
@@ -848,11 +848,13 @@ apmebf.com
 app-wallee.com
 app.crossengage.io
 app.emarketeer.com
+app.enzuzo.com
 app.getresponse.com
 app.getsentry.com
 app.hatchbuck.com
 app.hubspot.com
 app.insightgrit.com
+app.lifeinside.io
 app.link
 app.mluvii.com
 app.paykickstart.com
@@ -978,6 +980,7 @@ b2btracking.addvalue.de
 b2bvideo.ru
 babator.com
 backbeatmedia.com
+backend.lifeinside.io
 backoffice.transmatico.com
 bacontent.de
 badge.facebook.com
@@ -1255,10 +1258,12 @@ ccm19.de
 ccmbg.com
 cd-ladsp-com.s3.amazonaws.com
 cdn-0.d41.co
+cdn-cookieyes.com
 cdn-cs.com
 cdn-net.com
 cdn-saveit.wanelo.com
 cdn-scripts.signifyd.com
+cdn-sitegainer.com
 cdn-static.formisimo.com
 cdn-vk.com
 cdn-widget.callpage.io
@@ -1289,6 +1294,7 @@ cdn.carrotquest.io
 cdn.cdnrl.com
 cdn.cohesionapps.com
 cdn.connecto.io
+cdn.contentstack.io
 cdn.cquotient.com
 cdn.cupinteractive.com
 cdn.decibelinsight.net
@@ -1307,6 +1313,7 @@ cdn.flurry.com
 cdn.foxpush.net
 cdn.fresh8.co
 cdn.gigya.com
+cdn.glassboxcdn.com
 cdn.gravitec.net
 cdn.gumgum.com
 cdn.id.services
@@ -1317,6 +1324,7 @@ cdn.krxd.net
 cdn.kyto.com
 cdn.lepinsar.com
 cdn.limk.com
+cdn.linkedin.oribi.io
 cdn.listrakbi.com
 cdn.loop11.com
 cdn.m6r.eu
@@ -1375,6 +1383,7 @@ cdn1.tags1.revdepo.com
 cdn1.tags3.revdepo.com
 cdn13.com
 cdn2.admatic.com.tr
+cdn2.hubspot.net
 cdn2.lockerdome.com
 cdn3.optimizely.com
 cdn4.forter.com
@@ -1425,6 +1434,7 @@ chaordicsystems.com
 chartbeat.com
 chartbeat.net
 chaser.ru
+chat.customerly.io
 chat.freshdesk.com
 chat.mochapp.com
 chatango.com
@@ -1462,6 +1472,7 @@ cleversite.ru
 click-to-trace.com
 click.rummycircle.com
 click.tiara.kakao.com
+clickagy.com
 clickanalyzer.jp
 clickandchat.com
 clickbank.net
@@ -1529,6 +1540,8 @@ cm.dpclk.com
 cm.shareaholic.com
 cmbestsrv.com
 cmcore.com
+cmk.iqiyi.com
+cmp.osano.com
 cms.c1exchange.com
 cn.clickable.net
 cn01.dwstat.cn
@@ -1850,6 +1863,7 @@ daumcdn.net
 davebestdeals.com
 dawandastatic.com
 dc-storm.com
+dc.ads.linkedin.com
 dc8na2hxrj29i.cloudfront.net
 dc8xl0ndzn2cb.cloudfront.net
 dcbap.com
@@ -1900,6 +1914,7 @@ digicert.com
 digidip.net
 digiglitzmarketing.go2cloud.org
 digioh.com
+digital-cloud.medallia.com
 digitalgov.gov
 digitaltarget.ru
 digiteka.net
@@ -2179,6 +2194,8 @@ fby.s3.amazonaws.com
 fdz.flashtalking.com
 featurelink.com
 feedads.g.doubleclick.net
+feedback-eu1.hubapi.com
+feedback.hubapi.com
 feedbackify.com
 feedburner.com
 feedify.de
@@ -2268,6 +2285,7 @@ fsr.fuel451.com
 fstrk.net
 ftjcfx.com
 fullstory.com
+fundingchoicesmessages.google.com
 fusionads.net
 fwbntw.com
 fwmrm.net
@@ -2339,6 +2357,7 @@ githubassets.com
 githubusercontent.com
 gittip.com
 glanceguide.com
+glassboxdigital.io
 glganltcs.space
 gloadmarket.com
 global-alpha-dev.click
@@ -2450,6 +2469,7 @@ groovinads.com
 grt01.com
 grt02.com
 grvcdn.com
+gs.nmgassets.com
 gscontxt.net
 gscounters.us1.gigya.com
 gsfn.us
@@ -2468,6 +2488,7 @@ gumgum.com
 gumroad.com
 gunggo.com
 gw-services.vtrenz.net
+gw.linkedin.oribi.io
 gwa.reedbusiness.net
 gwallet.com
 gwiqcdn.globalwebindex.net
@@ -2544,9 +2565,14 @@ hqentertainmentnetwork.com
 hs-analytics.net
 hs-banner.com
 hs-scripts.com
+hs-sites-eu1.com
 hs-sites.com
 hs.interpolls.com
 hsappstatic.net
+hscollectedforms.net
+hscta.net
+hsforms.com
+hsforms.net
 hsleadflows.net
 hsoub.com
 hstrck.com
@@ -2554,6 +2580,13 @@ httpool.com
 hubapi.com
 hubrus.com
 hubspot.com
+hubspotfeedback.com
+hubspotusercontent00.net
+hubspotusercontent10.net
+hubspotusercontent20.net
+hubspotusercontent30.net
+hubspotusercontent40.net
+hubspotvideo.com
 hubvisor.io
 hupso.com
 hurra.com
@@ -2654,6 +2687,7 @@ industrybrains.com
 inextaction.net
 infinity-tracking.net
 infinityads.com
+inflightpanasonic.aero
 info.evidon.com
 infolinks.com
 informer.com
@@ -2731,6 +2765,7 @@ iptargeting.com
 iptrack.io
 iq.onfocus.io
 iqcontentplatform.de
+iqiyi.com
 ir1s.mobi
 irs09.com
 isocket.com
@@ -2779,7 +2814,6 @@ js.gb-world.net
 js.geoads.com
 js.goods.redtram.com
 js.honeybadger.io
-js.hs-banner.com
 js.hs-scripts.com
 js.hsleadflows.net
 js.indexww.com
@@ -2994,6 +3028,7 @@ loadsource.org
 locayta.com
 log.adap.tv
 log.affiliate.rakuten.co.jp
+log.cookieyes.com
 log.feedjit.com
 log.optimizely.com
 log.outbrain.com
@@ -3096,10 +3131,10 @@ mconet.biz
 mct.rkdms.com
 mdcn.mobi
 mdotlabs.com
+medallia.com
 media-amazon.com
 media-clic.com
 media-imdb.com
-media.chute.io
 media.conversio.com
 media.flixcar.com
 media.gsimedia.net
@@ -3138,6 +3173,7 @@ mercadolivre.com.br
 merchantadvantage.com
 merchenta.com
 messenger.com
+messenger.customerly.io
 met.vgwort.de
 metabar.ru
 metaffiliation.com
@@ -3341,6 +3377,8 @@ nimblecommerce.com
 nitropay.com
 nk.pl
 nmcdn.us
+nmgassets.com
+no-cache.hubspot.com
 noaa.gov
 nocookie.net
 noddus.com
@@ -3500,6 +3538,7 @@ ozonemedia.com
 p-eu.acxiom-online.com
 p-td.com
 p.admob.com
+p.adsymptotic.com
 p.brilig.com
 p.cityspark.com
 p.cquotient.com
@@ -3511,6 +3550,7 @@ p1.ntvk1.ru
 p16-sign-va.tiktokcdn.com
 p161.net
 p77-sign-va.tiktokcdn.com
+pacwisp.net
 pagead2.googlesyndication.com
 pageanalytics.space
 pagefair.com
@@ -3683,6 +3723,7 @@ prfct.co
 pricegrabber.com
 prismamediadigital.com
 privacy-center.org
+privacy-mgmt.com
 privacy-policy.truste.com
 privy.com
 prnx.net
@@ -3753,6 +3794,7 @@ pushno.com
 pushwhy.com
 pushwoosh.com
 pvclouds.com
+px.ads.linkedin.com
 px.airpr.com
 px.c1exchange.com
 px.dynamicyield.com
@@ -3761,6 +3803,7 @@ px.multiscreensite.com
 px.owneriq.net
 px.steelhousemedia.com
 px.surveywall-api.survata.com
+px4.ads.linkedin.com
 q-divisioncdn.de
 q-sis.de
 q1mediahydraplatform.com
@@ -3887,6 +3930,7 @@ remarketstats.com
 remintrex.com
 remove.video
 replaycontroller.4seeresults.com
+report-uri.com
 reporting.singlefeed.com
 republer.com
 res-x.com
@@ -4047,6 +4091,7 @@ salesmanago.pl
 salespidermedia.com
 salesviewer.com
 samba.tv
+sanalytics.disneyplus.com
 sanoma.fi
 sap-xm.org
 sape.ru
@@ -4156,6 +4201,7 @@ service.octavius.rocks
 service.optify.net
 servicer.marketgid.com
 servicer.mgid.com
+services.inflightpanasonic.aero
 services.sheerid.com
 serving-sys.com
 servmetric.com
@@ -4224,6 +4270,7 @@ sitebro.com.tw
 sitebro.net
 sitebro.tw
 sitecompass.com
+sitegainer.com
 siteheart.com
 siteimprove.com
 siteimproveanalytics.com
@@ -4235,6 +4282,7 @@ sitestat.com
 sitetag.us
 sixt-neuwagen.de
 sizmek.com
+sjs.bizographics.com
 skadtec.com
 skimlinks.com
 skimresources.com
@@ -4243,6 +4291,51 @@ skyglue.com
 skype.com
 skypeassets.com
 skysa.com
+skyscanner.ae
+skyscanner.at
+skyscanner.ca
+skyscanner.ch
+skyscanner.co.id
+skyscanner.co.il
+skyscanner.co.in
+skyscanner.co.kr
+skyscanner.co.nz
+skyscanner.co.th
+skyscanner.co.za
+skyscanner.com
+skyscanner.com.au
+skyscanner.com.br
+skyscanner.com.eg
+skyscanner.com.hk
+skyscanner.com.mx
+skyscanner.com.my
+skyscanner.com.ph
+skyscanner.com.sa
+skyscanner.com.sg
+skyscanner.com.tr
+skyscanner.com.tw
+skyscanner.com.ua
+skyscanner.com.vn
+skyscanner.cz
+skyscanner.de
+skyscanner.dk
+skyscanner.es
+skyscanner.fi
+skyscanner.fr
+skyscanner.gg
+skyscanner.hu
+skyscanner.ie
+skyscanner.it
+skyscanner.jp
+skyscanner.net
+skyscanner.nl
+skyscanner.no
+skyscanner.pk
+skyscanner.pl
+skyscanner.pt
+skyscanner.qa
+skyscanner.ro
+skyscanner.se
 skyscnr.com
 slashdot.org
 sleeknotestaticcontent.sleeknote.com
@@ -4518,6 +4611,7 @@ supplyframe.com
 surfingbird.ru
 surinter.net
 surphace.com
+svc.dynamics.com
 svlu.net
 svonm.com
 svtrd.com
@@ -4654,6 +4748,7 @@ thewheelof.com
 thinglink.com
 thinkific.leadpages.net
 tiaa-cref.org
+tianxun.com
 tiara.gl.kakao.com
 tiara.kakao.com
 tidaltv.com
@@ -4854,6 +4949,7 @@ turner.com
 turnsocial.com
 turnto.com
 tutti-ams.gravityrd-services.com
+tvpixel.com
 tvsquared.com
 tweetboard.com
 tweetmeme.com
@@ -5084,6 +5180,7 @@ wbtrk.net
 wcfbc.net
 wcs.naver.net
 wdr.de
+we-stats.com
 weather.com
 web-path.com
 web-sdk.aptrinsic.com
@@ -5137,8 +5234,6 @@ weebly.com
 weltsport.net
 wemfbox.ch
 westlotto.com
-wetter.com
-wettercomassets.com
 wfxtriggers.com
 whatsbroadcast.com
 whos.amung.us
@@ -5160,6 +5255,7 @@ widget.foodieblogroll.com
 widget.hypercomments.com
 widget.jeeng.com
 widget.kelkoo.com
+widget.lifeinside.io
 widget.privy.com
 widget.quantcast.com
 widget.raisenow.com
@@ -5371,6 +5467,7 @@ zmctrack.net
 zog.link
 zononi.com
 zoomg.camp.sabavision.com
+zoominfo.com
 zopim.com
 zqtk.net
 ztat.net

@@ -1,10 +1,12 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-// Set to store tracking sites, arrays to store cookies, and open browser tabs
+
+// Initializing a Set to store tracking websites, arrays to hold cookies, and open browser tabs
 let trackingSites = new Set();
 let cookies = [];
 let tabs = [];
+
 
 // Fetches the tracker database and populates the trackingSites Set
 async function fetchTrackerDB() {
@@ -16,11 +18,13 @@ async function fetchTrackerDB() {
     return trackingSites;
 }
 
+
 // Fetches the current cookies and tabs data from the browser
 async function fetchCookiesAndTabs() {
     cookies = await browser.cookies.getAll({});
     tabs = await browser.tabs.query({});
 }
+
 
 // Initializes the extension by fetching the tracker database and displaying cookies
 async function initExtension() {
@@ -29,7 +33,8 @@ async function initExtension() {
     displayCookies();
 }
 
-// Update the display of cookies to indicate tracking sites with a ghost icon
+
+// Update the display of cookies to indicate known tracking sites with a ghost icon
 function updateCookieDisplay(element, domain) {
     if (trackingSites.has(domain)) {
         const icon = document.createElement('span');
@@ -41,16 +46,70 @@ function updateCookieDisplay(element, domain) {
     }
 }
 
+
+// Function to extract the main domain of each cookie, up to 3 levels (e.g., "sub.example.co.uk" -> "example.co.uk")
+function getMainDomain(domain) {
+    return domain.split('.').filter(part => part && part !== 'www').slice(-3).join('.');
+}
+
+
+// Function to check for an exact match between two domains or determines if one domain is a subdomain of the other (related to the green highlight function)
+function isDomainOrSubdomain(domain1, domain2) {
+    const mainDomain1 = getMainDomain(domain1);
+    const mainDomain2 = getMainDomain(domain2);
+
+    if (mainDomain1 === mainDomain2) return true;
+
+    const parts1 = domain1.split('.').reverse();
+    const parts2 = domain2.split('.').reverse();
+
+    for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
+        if (parts1[i] !== parts2[i]) return false;
+    }
+    return true;
+}
+
+
+// Function to categorize cookies associated with closed tabs
+function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
+    return cookies.filter(cookie => {
+        const cookieDomain = getMainDomain(cookie.domain);
+        return !openTabUrls.some(tabUrl => tabUrl.includes(cookieDomain));
+    });
+}
+
+
+// Function to delete cookies from closed tabs (used with icon 1)
+async function deleteCookiesFromClosedTabs(cookies) {
+    await Promise.all(cookies.map(cookie => 
+        browser.cookies.remove({ 
+            url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`, 
+            name: cookie.name 
+        })
+    ));
+}
+
+
 // Function to fetch and display cookies per website domain
 function displayCookies() {
-    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+    
+    // Extract and cache hostnames and main domains from open tabs
+    const openTabDomains = tabs.map(tab => {
+        const hostname = new URL(tab.url).hostname;
+        return {
+            hostname,
+            mainDomain: getMainDomain(hostname)
+        };
+    });
+
     const container = document.getElementById('cookies-container');
+    
     // Clear the container before populating it with updated data
     container.innerHTML = '';
 
-    // Count the number of cookies per website
-    const websiteCounts = cookies.reduce((acc, cookie) => {
-        const mainDomain = getMainDomain(cookie.domain);
+    // Count the number of cookies per main domain
+    const websiteCounts = cookies.reduce((acc, { domain }) => {
+        const mainDomain = getMainDomain(domain);
         acc[mainDomain] = (acc[mainDomain] || 0) + 1;
         return acc;
     }, {});
@@ -58,16 +117,16 @@ function displayCookies() {
     // Create and display elements for each website and its number of cookies
     const fragment = document.createDocumentFragment();
     const elements = Object.entries(websiteCounts)
-        .sort(([a], [b]) => a.localeCompare(b))
+        .sort(([a], [b]) => a.localeCompare(b)) // Sort domains alphabetically
         .map(([website, count]) => {
             const element = document.createElement('div');
             element.textContent = `${website} (${count})`;
 
-            updateCookieDisplay(element, website);
+            updateCookieDisplay(element, website); // Update the display for each cookie
 
             // Highlight websites that are currently open in tabs
-            if (openTabUrls.some(tabUrl => tabUrl.includes(website))) {
-                element.style.color = '#04A65D';
+            if (openTabDomains.some(({ mainDomain }) => isDomainOrSubdomain(mainDomain, getMainDomain(website)))) {
+                element.style.color = '#04A65D'; // Highlight color for open tab domains
             }
 
             return element;
@@ -80,47 +139,49 @@ function displayCookies() {
     container.appendChild(fragment);
 }
 
-// Function to delete cookies with a specific main domain
+
+// Function to delete cookies when clicking (left-clicking) on a specific main domain
 async function deleteCookiesWithMainDomain(cookies, mainDomain) {
     const cookiesToDelete = cookies.filter(cookie => cookie.domain.includes(mainDomain));
     await Promise.all(cookiesToDelete.map(async cookie => {
         const urls = cookiesToDelete
             .filter(c => c.name === cookie.name)
-            .map(c => (c.secure ? "https://" : "http://") + c.domain + c.path);
-        await Promise.all(urls.map(url => browser.cookies.remove({ url: url, name: cookie.name })));
+            .map(c => `http${c.secure ? 's' : ''}://${c.domain}${c.path}`);
+        await Promise.all(urls.map(url => browser.cookies.remove({ url, name: cookie.name })));
     }));
 }
+
 
 // Event listener to trigger the initialization of the extension
 document.addEventListener('DOMContentLoaded', async function() {
     await initExtension();
 
-    // Function to remove browsing data and refresh the display of cookies
+    // Function to remove browsing data and refresh the display of cookies (used for both icons 2 and 3)
     async function removeBrowsingData(options) {
         await browser.browsingData.remove({ since: 0 }, options);
         await fetchCookiesAndTabs();
         displayCookies();
     }
 
-    // Icon 1 function: delete cookies associated with closed tabs and refresh display
+    // Icon 1: delete cookies associated with closed tabs and refresh display
     document.getElementById('icon1').addEventListener('click', async function() {
         const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
         const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
 
         // Delete cookies associated with closed tabs
-        await deleteCookies(cookiesAssociatedWithClosedTabs);
+        await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
 
         // Refresh the display of cookies
         await fetchCookiesAndTabs();
         displayCookies();
     });
 
-    // Icon 2 function: remove all cookies and refresh display
+    // Icon 2: remove all cookies and refresh display
     document.getElementById('icon2').addEventListener('click', async function() {
         await removeBrowsingData({ cookies: true });
     });
 
-    // Icon 3 function: remove all browsing data and refresh display
+    // Icon 3: remove all browsing data and refresh display
     document.getElementById('icon3').addEventListener('click', async function() {
         await removeBrowsingData({
             cache: true,
@@ -165,14 +226,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 });
 
-// Helper function to extract the main domain from a cookie domain
-function getMainDomain(domain) {
-    return domain.replace(/^(?:.*\.)?([^.]+\.[^.]+)$/, '\$1');
-}
 
 // Function to display cookie details in a table format and a new window
 async function displayCookieDetails(mainDomain, cookies) {
-
     // Check if dark mode is enabled
     const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -211,17 +267,21 @@ async function displayCookieDetails(mainDomain, cookies) {
     };
 
     // Create table headers
+    const headerRow = table.insertRow();
     headers.forEach(({ title, description }) => {
         const headerCell = document.createElement('th');
         headerCell.textContent = title;
         headerCell.title = description;
         Object.assign(headerCell.style, headerStyle);
-        table.appendChild(headerCell);
+        headerRow.appendChild(headerCell);
     });
 
     // Filter and display cookies relevant to the main domain
     cookies
-        .filter(cookie => cookie.domain.includes(mainDomain))
+        .filter(cookie => {
+            const cookieMainDomain = getMainDomain(cookie.domain);
+            return cookieMainDomain === mainDomain;
+        })
         .forEach(({ name, value, domain, expirationDate, secure, httpOnly, sameSite }) => {
             const row = table.insertRow();
             const cookieSize = calculateCookieSize({ name, value, domain, expirationDate, secure, httpOnly, sameSite });
@@ -241,7 +301,8 @@ async function displayCookieDetails(mainDomain, cookies) {
     newWindow.document.body.appendChild(table);
 }
 
-// Function to calculate the size of a cookie in bytes
+
+// Function to calculate an "approximate" size for a cookie in bytes (used in the table)
 function calculateCookieSize(cookie) {
     const name = encodeURIComponent(cookie.name);
     const value = encodeURIComponent(cookie.value);
@@ -251,17 +312,24 @@ function calculateCookieSize(cookie) {
     return bytes.length;
 }
 
-// Function to categorize cookies associated with closed tabs
-function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
-    return cookies.filter(cookie => {
-        const cookieDomain = cookie.domain.replace(/^www\.|^.*?([^\.]+\.[^\.]+)$/, '\$1');
-        return !openTabUrls.some(tabUrl => tabUrl.includes(cookieDomain));
+
+// BETA (AND CERTAINLY USELESS) FUNCTION: notifications when cookies are deleted, to be activated in the settings 
+function handleCookieChangeNotification(changeInfo) {
+    // Check if setting1 is enabled
+    browser.storage.local.get('setting1').then(result => {
+        if (result.setting1 && changeInfo.removed) {
+            // Trigger a notification when a cookie is removed
+            const notificationOptions = {
+                type: 'basic',
+                iconUrl: 'icon.png',
+                title: 'Cookie Removed',
+                message: `A cookie has been removed: ${changeInfo.cookie.name}`
+            };
+
+            browser.notifications.create(notificationOptions);
+        }
     });
 }
 
-// Function to delete cookies
-async function deleteCookies(cookies) {
-    for (const cookie of cookies) {
-        await browser.cookies.remove({ url: "http" + (cookie.secure ? "s" : "") + "://" + cookie.domain + cookie.path, name: cookie.name });
-    }
-}
+// Event listener for cookies.onChanged to trigger notifications
+browser.cookies.onChanged.addListener(handleCookieChangeNotification);
