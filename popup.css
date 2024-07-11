@@ -18,9 +18,8 @@ body {
 
 /* Cookies container style */
 #cookies-container {
-    overflow: hidden; 
-    margin-top: 0px;
-    margin-bottom: 0;
+    overflow: hidden;
+    margin: 0;
     max-height: 500px;
     max-width: auto;
     overflow-y: auto;
@@ -29,7 +28,7 @@ body {
 /* Cookies list and hover effect */
 #cookies-container div {
     text-align: left;
-    margin-bottom: 0;
+    margin: 0;
     border-radius: 0;
     padding: 2px 5px;
     color: var(--text-color);
@@ -42,11 +41,11 @@ body {
 
 /* Light and dark theme settings */
 :root {
-    --background-color: #FFFFFF;
-    --text-color: #000000;
+    --background-color: #FFF;
+    --text-color: #000;
     --highlight-color: #DFDFE4;
-    --icon-color-light: #000000;
-    --icon-color-dark: #FFFFFF;
+    --icon-color-light: #000;
+    --icon-color-dark: #FFF;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -55,48 +54,101 @@ body {
         --text-color: #FCFCFF;
         --highlight-color: #5F5E68;
     }
-
-    #icons-container i {
-        color: var(--icon-color-dark);
-    }
 }
 
+/* Icon color settings based on theme */
 @media (prefers-color-scheme: light) {
     #icons-container i {
         color: var(--icon-color-light);
     }
 }
 
-/* Horizontal separator */
-#separator {
-    width: 100%;
-    border-top: 1.5px solid #ccc;
-    margin-top: 0px;
-    opacity: 0.2;
+@media (prefers-color-scheme: dark) {
+    #icons-container i {
+        color: var(--icon-color-dark);
+    }
 }
 
-/* Bottom icons style */
+/* Ghost icon style */
+.ghost-icon {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Active tab icon style */
+.active-tab-icon {
+    font-size: 9px;
+    opacity: 0.8;
+    color: #FE0179;
+}
+
+/* Bottom icons container style */
 #icons-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    text-align: center;
+    margin: 4px 0;
 }
 
 #icons-container i {
-    margin: 0 10px;
+    margin: 0 6px;
     cursor: pointer;
     opacity: 0.2;
-    transition: opacity 0.1s, transform 0.3s;
 }
 
 #icons-container i:hover {
     opacity: 1;
-    transform: scale(1.3);
+    color: #FE0179;
+    transform: scale(1.2);
 }
 
-/* Special color for the icon3 */
-#icon3:hover::before {
-    color:#FE0179;
+/* Special color for icon4 on hover */
+#icon4:hover::before {
+    color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+    #icon4:hover::before {
+        color: white;
+    }
+}
+
+/* Styles for the detailed cookie table */
+.cookie-table {
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.header-cell {
+    padding: 4px;
+    border: none;
+    text-align: center;
+    background-color: var(--header-background-color, #f2f2f2);
+    color: var(--header-color, black);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.cell {
+    padding: 4px;
+    border: none;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Dark mode support for the table */
+@media (prefers-color-scheme: dark) {
+    .cookie-table {
+        color: white;
+    }
+    .header-cell {
+        background-color: #333;
+        color: white;
+    }
 }

@@ -1,11 +1,19 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
 <!-- Made with ❤ by micka -->
 
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleCookie</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            font-size: 15px;
+        }
+
         .icon-text {
             display: inline-flex;
             align-items: center;
@@ -21,41 +29,68 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 14px;
+            margin-left: 10px;
         }
 
-        /* Tooltip container */
-        .tooltip {
-            position: relative;
-            display: inline-block;
-            margin-left: 5px; /* Adjust the margin as needed */
+        .green-icon {
+            color: #04A65D;
+            cursor: pointer;
+            margin-right: 10px;
         }
 
-        /* Tooltip text */
-        .tooltip .tooltiptext {
-            display: none;
-            position: absolute;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 5px;
-            z-index: 1;
+        .settings-section {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
         }
 
-        /* Show the tooltip text when you mouse over the tooltip container */
-        .tooltip:hover .tooltiptext {
-            display: block;
+        .settings-section span {
+            margin-right: 0;
+        }
+
+        .settings-section label {
+            display: flex;
+            align-items: center;
+        }
+
+        .settings-section input[type="checkbox"] {
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <h3 class="icon-text"><i class="fa-solid fa-screwdriver-wrench"></i>Settings</h3>
-    <div class="tooltip">
-        Select the level of main domain extraction from -1 to -4 (-2 is used by default)
-        <i class="fa-solid fa-info-circle"></i>
-        <span class="tooltiptext">For example, with a value of -2, SimpleCookie won't distinguish between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to test and choose what works best for you.</span>
+    <h3 class="icon-text"><i class="fa-solid fa-gears"></i> Settings</h3>
+
+    <div class="container settings-section">
+        <i class="fas fa-info-circle green-icon" title="Select the level of main domain extraction from -1 to -4 (-2 is used by default). For example, with a value of -2, SimpleCookie won't differentiate between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to experiment and choose what works best for you."></i>
+        <span>Main domain extraction level</span>
+        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
     </div>
-    <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
+
+    <div class="container settings-section">
+        <i class="fas fa-info-circle green-icon" title="Display a ghost icon for known tracking sites using an internal tracking database derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy."></i>
+        <span>Highlight websites known to track your activity</span>
+        <label>
+            <input type="checkbox" id="enableGhostIcon">
+        </label>
+    </div>
+
+    <div class="container settings-section">
+        <i class="fas fa-info-circle green-icon" title="Display a small icon to the left of the listed website corresponding to the active tab."></i>
+        <span>Highlight the active tab</span>
+        <label>
+            <input type="checkbox" id="enableActiveTabHighlight">
+        </label>
+    </div>
+
+    <div class="container settings-section">
+        <i class="fas fa-info-circle green-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu -> SimpleCookie -> Preferences/Options."></i>
+        <span>Show the shortcut icons in a bottom ribbon</span>
+        <label>
+            <input type="checkbox" id="showIconsContainer">
+        </label>
+    </div>
+
     <script src="settings.js"></script>
 </body>
 </html>

@@ -1,12 +1,10 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-
 // Initializing a Set to store tracking websites, arrays to hold cookies, and open browser tabs
 let trackingSites = new Set();
 let cookies = [];
 let tabs = [];
-
 
 // Fetches the tracker database and populates the trackingSites Set
 async function fetchTrackerDB() {
@@ -15,9 +13,7 @@ async function fetchTrackerDB() {
         const text = await response.text();
         trackingSites = new Set(text.split('\n').map(domain => domain.trim()));
     }
-    return trackingSites;
 }
-
 
 // Fetches the current cookies and tabs data from the browser
 async function fetchCookiesAndTabs() {
@@ -25,29 +21,73 @@ async function fetchCookiesAndTabs() {
     tabs = await browser.tabs.query({});
 }
 
-
 // Initializes the extension by fetching the tracker database and displaying cookies
 async function initExtension() {
     await fetchTrackerDB();
     await fetchCookiesAndTabs();
-    displayCookies();
+
+    // Get settings from local storage with default values
+    const defaultSettings = {
+        enableGhostIcon: true,
+        enableActiveTabHighlight: true,
+        showIconsContainer: true
+    };
+
+    const settings = await browser.storage.local.get(defaultSettings);
+
+    // Save default settings if they don't exist
+    await browser.storage.local.set(settings);
+
+    displayCookies(settings.enableGhostIcon);
+
+    if (settings.enableActiveTabHighlight) {
+        highlightActiveTabDomain();
+    }
+
+    // Check and set the default value for showIconsContainer
+    if (settings.showIconsContainer === undefined) {
+        settings.showIconsContainer = true;
+        await browser.storage.local.set({ showIconsContainer: true });
+    }
+
+    // Update the popup UI based on the showIconsContainer setting
+    const iconsContainer = document.getElementById('icons-container');
+    iconsContainer.style.display = settings.showIconsContainer ? 'block' : 'none';
 }
 
+// Call the initExtension function when the popup is opened
+initExtension();
 
 // Update the display of cookies to indicate known tracking sites with a ghost icon
 function updateCookieDisplay(element, domain) {
     if (trackingSites.has(domain)) {
         const icon = document.createElement('span');
-        icon.classList.add('fas', 'fa-ghost');
-        icon.style.opacity = '0.6';
-        icon.style.fontSize = '0.9em';
+        icon.classList.add('fas', 'fa-ghost', 'ghost-icon');
         element.appendChild(document.createTextNode(' '));
         element.appendChild(icon);
     }
 }
 
-
-
+// Function to highlight the active tab's domain in the popup
+function highlightActiveTabDomain() {
+    const activeTab = tabs.find(tab => tab.active);
+    if (activeTab) {
+        const activeDomain = getMainDomain(new URL(activeTab.url).hostname);
+        const container = document.getElementById('cookies-container');
+        if (container) {
+            for (const element of container.childNodes) {
+                const domainText = element.textContent.trim().split(' ')[0];
+                const mainDomain = getMainDomain(domainText);
+                if (mainDomain === activeDomain) {
+                    const icon = document.createElement('i');
+                    icon.classList.add('fas', 'fa-play', 'active-tab-icon');
+                    icon.style.marginRight = '3px';
+                    element.insertBefore(icon, element.firstChild);
+                }
+            }
+        }
+    }
+}
 
 // Default number of levels for main domain extraction (Check SimpleCookie preferences for options)
 let numLevels = -2;
@@ -64,29 +104,20 @@ async function getNumLevels() {
         numLevels = result.numLevels;
     }
 }
-
-// Call getNumLevels to initialize the numLevels variable
 getNumLevels();
 
-
-
-
-// Function to check for an exact match between two domains or determines if one domain is a subdomain of the other (related to the green highlight function)
+// Function to check for an exact match between two domains or determines if one domain is a subdomain of the other
 function isDomainOrSubdomain(domain1, domain2) {
     const mainDomain1 = getMainDomain(domain1);
     const mainDomain2 = getMainDomain(domain2);
-
     if (mainDomain1 === mainDomain2) return true;
-
     const parts1 = domain1.split('.').reverse();
     const parts2 = domain2.split('.').reverse();
-
     for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
         if (parts1[i] !== parts2[i]) return false;
     }
     return true;
 }
-
 
 // Function to categorize cookies associated with closed tabs
 function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
@@ -96,22 +127,18 @@ function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
     });
 }
 
-
-// Function to delete cookies from closed tabs (used with icon 1)
+// Function to delete cookies from closed tabs
 async function deleteCookiesFromClosedTabs(cookies) {
-    await Promise.all(cookies.map(cookie => 
-        browser.cookies.remove({ 
-            url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`, 
-            name: cookie.name 
+    await Promise.all(cookies.map(cookie =>
+        browser.cookies.remove({
+            url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`,
+            name: cookie.name
         })
     ));
 }
 
-
 // Function to fetch and display cookies per website domain
-function displayCookies() {
-    
-    // Extract and cache hostnames and main domains from open tabs
+function displayCookies(enableGhostIcon) {
     const openTabDomains = tabs.map(tab => {
         const hostname = new URL(tab.url).hostname;
         return {
@@ -121,44 +148,34 @@ function displayCookies() {
     });
 
     const container = document.getElementById('cookies-container');
-    
-    // Clear the container before populating it with updated data
     container.innerHTML = '';
 
-    // Count the number of cookies per main domain
     const websiteCounts = cookies.reduce((acc, { domain }) => {
         const mainDomain = getMainDomain(domain);
         acc[mainDomain] = (acc[mainDomain] || 0) + 1;
         return acc;
     }, {});
 
-    // Create and display elements for each website and its number of cookies
     const fragment = document.createDocumentFragment();
     const elements = Object.entries(websiteCounts)
-        .sort(([a], [b]) => a.localeCompare(b)) // Sort domains alphabetically
+        .sort(([a], [b]) => a.localeCompare(b))
         .map(([website, count]) => {
             const element = document.createElement('div');
             element.textContent = `${website} (${count})`;
-
-            updateCookieDisplay(element, website); // Update the display for each cookie
-
-            // Highlight websites that are currently open in tabs
-            if (openTabDomains.some(({ mainDomain }) => isDomainOrSubdomain(mainDomain, getMainDomain(website)))) {
-                element.style.color = '#04A65D'; // Highlight color for open tab domains
+            if (enableGhostIcon) {
+                updateCookieDisplay(element, website);
             }
-
+            if (openTabDomains.some(({ mainDomain }) => isDomainOrSubdomain(mainDomain, getMainDomain(website)))) {
+                element.style.color = '#04A65D';
+            }
             return element;
         });
 
-    // Add the created elements to the fragment
     fragment.append(...elements);
-
-    // Add the fragment to the container
     container.appendChild(fragment);
 }
 
-
-// Function to delete cookies when clicking (left-clicking) on a specific main domain
+// Function to delete cookies when clicking on a specific main domain
 async function deleteCookiesWithMainDomain(cookies, mainDomain) {
     const cookiesToDelete = cookies.filter(cookie => cookie.domain.includes(mainDomain));
     await Promise.all(cookiesToDelete.map(async cookie => {
@@ -169,38 +186,37 @@ async function deleteCookiesWithMainDomain(cookies, mainDomain) {
     }));
 }
 
-
 // Event listener to trigger the initialization of the extension
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     await initExtension();
 
-    // Function to remove browsing data and refresh the display of cookies (used for both icons 2 and 3)
     async function removeBrowsingData(options) {
         await browser.browsingData.remove({ since: 0 }, options);
         await fetchCookiesAndTabs();
-        displayCookies();
+        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
+        displayCookies(settings.enableGhostIcon);
+        if (settings.enableActiveTabHighlight) {
+            highlightActiveTabDomain();
+        }
     }
 
-    // Icon 1: delete cookies associated with closed tabs and refresh display
-    document.getElementById('icon1').addEventListener('click', async function() {
+    document.getElementById('icon1').addEventListener('click', async function () {
         const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
         const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-
-        // Delete cookies associated with closed tabs
         await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
-
-        // Refresh the display of cookies
         await fetchCookiesAndTabs();
-        displayCookies();
+        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
+        displayCookies(settings.enableGhostIcon);
+        if (settings.enableActiveTabHighlight) {
+            highlightActiveTabDomain();
+        }
     });
 
-    // Icon 2: remove all cookies and refresh display
-    document.getElementById('icon2').addEventListener('click', async function() {
+    document.getElementById('icon2').addEventListener('click', async function () {
         await removeBrowsingData({ cookies: true });
     });
 
-    // Icon 3: remove all browsing data and refresh display
-    document.getElementById('icon3').addEventListener('click', async function() {
+    document.getElementById('icon3').addEventListener('click', async function () {
         await removeBrowsingData({
             cache: true,
             cookies: true,
@@ -215,23 +231,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
-    // Function to hide the horizontal separator if the cookie container is empty
     const cookiesContainer = document.getElementById("cookies-container");
-    const separator = document.getElementById("separator");
-    const toggleSeparatorVisibility = () => {
-        separator.style.display = cookiesContainer.children.length === 0 ? "none" : "block";
-    };
-    toggleSeparatorVisibility();
-    new MutationObserver(toggleSeparatorVisibility).observe(cookiesContainer, { childList: true });
 
-    // Event delegation for left-clicking and right-clicking
     cookiesContainer.addEventListener('click', async (event) => {
         if (event.target.nodeName === 'DIV') {
             const website = event.target.textContent.split(' ')[0];
             event.preventDefault();
             await deleteCookiesWithMainDomain(cookies, website);
             await fetchCookiesAndTabs();
-            displayCookies();
+            const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
+            displayCookies(settings.enableGhostIcon);
+            if (settings.enableActiveTabHighlight) {
+                highlightActiveTabDomain();
+            }
         }
     });
 
@@ -244,110 +256,99 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 });
 
-
-// Function to display cookie details in a table format and a new window
-async function displayCookieDetails(mainDomain, cookies) {
-    // Check if dark mode is enabled
+// Function to display cookie details in a table format
+function displayCookieDetails(mainDomain, cookies) {
     const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Create the table element and set its style
-    const table = document.createElement('table');
-    table.style.cssText = `
-        border-collapse: collapse;
-        font-size: 13.5px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-        color: ${isDarkMode ? 'white' : 'black'};
-        table-layout: fixed;
-        width: 100%;
-    `;
+    const sortedCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === mainDomain)
+                                  .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Define headers for the table
+    const table = document.createElement('table');
+    table.className = 'cookie-table';
+
     const headers = [
-        { title: 'Name', description: 'The name of the cookie, which is used to identify it when sent between the client and the server' },
-        { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie' },
-        { title: 'Size', description: 'An "estimated" size of the cookie in bytes using a function that encodes the cookie name, value and additional information' },
-        { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains' },
-        { title: 'Expiration Date', description: 'The date and time when the cookie will expire. After this time, the cookie will no longer be sent by the browser to the server. An "invalid date" likely signifies a session cookie' },
-        { title: 'Secure Flag', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security' },
-        { title: 'HttpOnly Flag', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks' },
-        { title: 'SameSite Attribute', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts' }
+        { title: 'Name', description: 'The name of the cookie, which is used to identify it when sent between the client and the server.' },
+        { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie.' },
+        { title: 'Size', description: 'The size of the cookie in bytes using a function that encodes both the cookie name and value, where each character is assumed to be one byte.' },
+        { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
+        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.'},
+        { title: 'Secure Flag', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
+        { title: 'HttpOnly Flag', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
+        { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
     ];
 
-    // Define style for table headers
-    const headerStyle = {
-        padding: '8px',
-        border: '1px solid #ddd',
-        textAlign: 'left',
-        backgroundColor: isDarkMode ? '#333' : '#f2f2f2',
-        color: isDarkMode ? 'white' : 'black',
-        whiteSpace: 'pre-wrap',
-        wordWrap: 'break-word'
-    };
-
-    // Create table headers
     const headerRow = table.insertRow();
     headers.forEach(({ title, description }) => {
         const headerCell = document.createElement('th');
         headerCell.textContent = title;
         headerCell.title = description;
-        Object.assign(headerCell.style, headerStyle);
+        headerCell.className = 'header-cell';
         headerRow.appendChild(headerCell);
     });
 
-    // Filter and display cookies relevant to the main domain
-    cookies
-        .filter(cookie => {
-            const cookieMainDomain = getMainDomain(cookie.domain);
-            return cookieMainDomain === mainDomain;
-        })
-        .forEach(({ name, value, domain, expirationDate, secure, httpOnly, sameSite }) => {
-            const row = table.insertRow();
-            const cookieSize = calculateCookieSize({ name, value, domain, expirationDate, secure, httpOnly, sameSite });
-            const sameSiteValue = sameSite === 'Strict' ? 'Strict' : sameSite === 'Lax' ? 'Lax' : 'None';
-            [name, value, cookieSize, domain, new Date(expirationDate * 1000).toLocaleString(), secure ? 'Yes' : 'No', httpOnly ? 'Yes' : 'No', sameSiteValue]
-                .forEach(content => {
-                    const cell = document.createElement('td');
-                    cell.textContent = content;
-                    Object.assign(cell.style, headerStyle);
-                    row.appendChild(cell);
-                });
+    const addRow = (cookie) => {
+        const row = table.insertRow();
+        const { name, value, domain, expirationDate, secure, httpOnly, sameSite } = cookie;
+        const cookieSize = calculateCookieSize({ name, value, domain, expirationDate, secure, httpOnly, sameSite });
+
+        // Correctly handle the SameSite attribute
+        const sameSiteValue = sameSite === 'no_restriction' ? 'None' : sameSite === 'lax' ? 'Lax' : sameSite === 'strict' ? 'Strict' : 'None';
+
+        let expirationDateFormatted = '';
+        if (expirationDate !== undefined) {
+            expirationDateFormatted = new Date(expirationDate * 1000).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        const cellContents = [name, value, cookieSize, domain, expirationDateFormatted || 'Session', secure ? 'Yes' : 'No', httpOnly ? 'Yes' : 'No', sameSiteValue];
+        cellContents.forEach(content => {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            cell.className = 'cell';
+            row.appendChild(cell);
+
+            // Add tooltip to show full content on hover
+            cell.addEventListener('mouseenter', function() {
+                cell.title = cell.offsetWidth < cell.scrollWidth ? cell.textContent : '';
+            });
         });
 
-    // Create a new window to display the table
-    const newWindow = window.open();
-    newWindow.document.body.style.backgroundColor = 'transparent';
-    newWindow.document.body.appendChild(table);
+        // Add event listeners for the row
+        row.addEventListener('click', async function(event) {
+            await deleteCookie(cookie);
+            table.deleteRow(row.rowIndex); 
+        });
+
+        row.addEventListener('mouseenter', function() {
+            row.style.backgroundColor = isDarkMode ? '#5F5E68' : '#DFDFE4';
+            row.style.cursor = 'pointer'; // Change cursor to hand
+        });
+
+        row.addEventListener('mouseleave', function() {
+            row.style.backgroundColor = ''; // Reset background color on mouse leave
+            row.style.cursor = 'default'; // Reset cursor
+        });
+    };
+
+    sortedCookies.forEach(addRow);
+
+    document.body.appendChild(table);
 }
 
-
-// Function to calculate an "approximate" size for a cookie in bytes (used in the table)
-function calculateCookieSize(cookie) {
-    const name = encodeURIComponent(cookie.name);
-    const value = encodeURIComponent(cookie.value);
-    const metadata = `;domain=${cookie.domain};expires=${cookie.expirationDate};secure=${cookie.secure};httponly=${cookie.httpOnly};samesite=${cookie.sameSite}`;
-    const cookieString = `${name}=${value}${metadata}`;
-    const bytes = new TextEncoder().encode(cookieString);
-    return bytes.length;
-}
-
-
-// BETA (AND CERTAINLY USELESS) FUNCTION: notifications when cookies are deleted, to be activated in the settings 
-function handleCookieChangeNotification(changeInfo) {
-    // Check if setting1 is enabled
-    browser.storage.local.get('setting1').then(result => {
-        if (result.setting1 && changeInfo.removed) {
-            // Trigger a notification when a cookie is removed
-            const notificationOptions = {
-                type: 'basic',
-                iconUrl: 'icon.png',
-                title: 'Cookie Removed',
-                message: `A cookie has been removed: ${changeInfo.cookie.name}`
-            };
-
-            browser.notifications.create(notificationOptions);
-        }
+// Function to delete a cookie
+async function deleteCookie(cookie) {
+    await browser.cookies.remove({
+        url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`,
+        name: cookie.name
     });
 }
 
-// Event listener for cookies.onChanged to trigger notifications
-browser.cookies.onChanged.addListener(handleCookieChangeNotification);
+// Function to calculate the size of a cookie based on the length of the name and value
+function calculateCookieSize(cookie) {
+    const nameLength = cookie.name.length;
+    const valueLength = cookie.value.length;
+    return nameLength + valueLength;
+}
