@@ -7,18 +7,19 @@
 
 <h2>Main popup</h2>
 
-<img width="273" alt="Popup_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/4706708f-e71b-4b29-ba69-82b1cf63453a">
-<img width="273" alt="Popup_dark" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/7c45379e-021d-4f40-b583-b0de3376db16">
-<img width="273" alt="Popup_minimalist_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/ff0510af-b12f-464b-82b8-4edfe841a9ea">
+<img width="250" alt="Popup_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/4706708f-e71b-4b29-ba69-82b1cf63453a">
+<img width="250" alt="Popup_dark" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/7c45379e-021d-4f40-b583-b0de3376db16">
+<img width="250" alt="Popup_minimalist_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/ff0510af-b12f-464b-82b8-4edfe841a9ea">
 
 <h2>Detailed table</h2>
 
-<img width="450" alt="Table_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/d1e8ea3d-193d-4888-afe5-f0c2c20bac96">
-<img width="500" alt="Table_dark" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/84bc3210-09fe-4537-996a-51ae27386df8">
+<img width="450" alt="Table_light" src="https://github.com/user-attachments/assets/e492fa47-4ac9-4067-a8a2-0c30db462e6b">
+<img width="450" alt="Table_dark" src="https://github.com/user-attachments/assets/9ce272ff-9366-4a4f-9837-18bd9f75a903">
 
 <h2>Settings</h2>
 
-<img width="500" alt="Settings_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/b83687e2-1edf-406a-ac14-4d0193b46c24">
+<img width="450" alt="Settings_light" src="https://github.com/user-attachments/assets/d1fd2632-1305-49c9-90b5-c6ec0ab40607">
+<img width="450" alt="Settings_dark" src="https://github.com/user-attachments/assets/ceb7a0f8-aac3-48bf-a6f7-87cfae167c70">
 
 <h2>Key features</h2>
 
