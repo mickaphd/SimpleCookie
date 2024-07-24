@@ -5,6 +5,8 @@
 <h1 align="center">SimpleCookie</h1></p>
 <i>A minimalist yet efficient cookie manager for Firefox</i>
 
+<a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/"><img src="https://blog.mozilla.org/addons/files/2020/04/get-the-addon-fx-apr-2020.svg" height=50px></a>
+
 <h2>Main popup</h2>
 
 <img width="200" alt="Popup_light" src="https://github.com/mickaphd/SimpleCookie/assets/25211018/4706708f-e71b-4b29-ba69-82b1cf63453a">
