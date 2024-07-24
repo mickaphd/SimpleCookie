@@ -5,7 +5,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleCookie</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
@@ -32,20 +31,10 @@
             margin-left: 10px;
         }
 
-        .green-icon {
-            color: #04A65D;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-
         .settings-section {
             margin-bottom: 15px;
             display: flex;
             align-items: center;
-        }
-
-        .settings-section span {
-            margin-right: 0;
         }
 
         .settings-section label {
@@ -55,40 +44,98 @@
 
         .settings-section input[type="checkbox"] {
             margin-left: 10px;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .settings-section input[type="checkbox"]:checked::before {
+            content: '';
+            display: block;
+            width: 12px;
+            height: 12px;
+            background-color: #04A65D;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+        }
+
+        .info-icon {
+            margin-right: 10px;
+        }
+
+        @media (prefers-color-scheme: light) {
+            .info-icon, .footer-icons i {
+                color: black;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .info-icon, .footer-icons i {
+                color: white;
+            }
+        }
+
+        .footer-icons {
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 20px;
+            gap: 20px;
+        }
+
+        .footer-icons a {
+            text-decoration: none;
+            font-size: 24px;
         }
     </style>
 </head>
 <body>
-    <h3 class="icon-text"><i class="fa-solid fa-gears"></i> Settings</h3>
+    <h3 class="icon-text"><i class="fa-solid fa-gears"></i> <u>Settings</u></h3>
 
-    <div class="container settings-section">
-        <i class="fas fa-info-circle green-icon" title="Select the level of main domain extraction from -1 to -4 (-2 is used by default). For example, with a value of -2, SimpleCookie won't differentiate between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to experiment and choose what works best for you."></i>
-        <span>Main domain extraction level</span>
-        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
-    </div>
-
-    <div class="container settings-section">
-        <i class="fas fa-info-circle green-icon" title="Display a ghost icon for known tracking sites using an internal tracking database derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy."></i>
+    <div class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Display a ghost icon for known tracking sites using an internal tracking database derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy."></i>
         <span>Highlight websites known to track your activity</span>
         <label>
             <input type="checkbox" id="enableGhostIcon">
         </label>
     </div>
 
-    <div class="container settings-section">
-        <i class="fas fa-info-circle green-icon" title="Display a small icon to the left of the listed website corresponding to the active tab."></i>
+    <div class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Display a small icon to the left of the listed website that corresponds to the tab that is active at the moment you call up the SimpleCookie pop-up."></i>
         <span>Highlight the active tab</span>
         <label>
             <input type="checkbox" id="enableActiveTabHighlight">
         </label>
     </div>
 
-    <div class="container settings-section">
-        <i class="fas fa-info-circle green-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu -> SimpleCookie -> Preferences/Options."></i>
+    <div class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu -> SimpleCookie -> Preferences/Options."></i>
         <span>Show the shortcut icons in a bottom ribbon</span>
         <label>
             <input type="checkbox" id="showIconsContainer">
         </label>
+    </div>
+
+    <div class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Select the level of main domain extraction from -1 to -4 (-2 is used by default). For example, with a value of -2, SimpleCookie won't differentiate between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to experiment and choose what works best for you."></i>
+        <span>Main domain extraction level</span>
+        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
+    </div>
+
+    <br>
+    
+    <div class="footer-icons">
+        <a href="https://github.com/mickaphd/SimpleCookie" target="_blank" title="SimpleCookie on GitHub">
+            <i class="fab fa-github"></i>
+        </a>
+        <a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/" target="_blank" title="SimpleCookie for Firefox">
+            <i class="fab fa-firefox-browser"></i>
+        </a>
     </div>
 
     <script src="settings.js"></script>

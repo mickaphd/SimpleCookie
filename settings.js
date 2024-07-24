@@ -70,4 +70,4 @@ async function initializeSettings() {
 }
 
 // Initialize settings on page load
-initializeSettings();
+document.addEventListener('DOMContentLoaded', initializeSettings);

@@ -14,14 +14,16 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13.5px;
     background-color: var(--background-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Cookies container style */
 #cookies-container {
-    overflow: hidden;
     margin: 0;
     max-height: 500px;
-    max-width: auto;
+    max-width: 100%;
     overflow-y: auto;
 }
 
@@ -32,6 +34,7 @@ body {
     border-radius: 0;
     padding: 2px 5px;
     color: var(--text-color);
+    white-space: nowrap;
 }
 
 #cookies-container div:hover {
@@ -89,6 +92,7 @@ body {
     align-items: center;
     text-align: center;
     margin: 4px 0;
+    width: 100%; 
 }
 
 #icons-container i {

@@ -15,7 +15,7 @@ async function fetchTrackerDB() {
     }
 }
 
-// Fetches the current cookies and tabs data from the browser
+// Fetches the current cookies and tabs data
 async function fetchCookiesAndTabs() {
     cookies = await browser.cookies.getAll({});
     tabs = await browser.tabs.query({});
@@ -89,7 +89,7 @@ function highlightActiveTabDomain() {
     }
 }
 
-// Default number of levels for main domain extraction (Check SimpleCookie preferences for options)
+// Default number of levels for main domain extraction
 let numLevels = -2;
 
 // Function to extract the main domain of each cookie up to the specified number of levels
@@ -319,17 +319,17 @@ function displayCookieDetails(mainDomain, cookies) {
         // Add event listeners for the row
         row.addEventListener('click', async function(event) {
             await deleteCookie(cookie);
-            table.deleteRow(row.rowIndex); 
+            table.deleteRow(row.rowIndex);
         });
 
         row.addEventListener('mouseenter', function() {
             row.style.backgroundColor = isDarkMode ? '#5F5E68' : '#DFDFE4';
-            row.style.cursor = 'pointer'; // Change cursor to hand
+            row.style.cursor = 'pointer';
         });
 
         row.addEventListener('mouseleave', function() {
-            row.style.backgroundColor = ''; // Reset background color on mouse leave
-            row.style.cursor = 'default'; // Reset cursor
+            row.style.backgroundColor = '';
+            row.style.cursor = 'default';
         });
     };
 

@@ -1,23 +1,25 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
 <!-- Made with ❤ by micka -->
 
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>SimpleCookie</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
   <link rel="stylesheet" href="popup.css">
-  <script src="popup.js"></script>
+  <script defer src="popup.js"></script>
 </head>
 <body>
   <div id="popup">
     <div id="cookies-container"></div>
-    <div id="icons-container" style="display: ${showIconsContainer ? 'block' : 'none'}">
-      <i id="icon1" class="fas fa-solid fa-broom" title="⚠️ Remove cookies from closed tabs, keeping only those associated with currently open tabs (domains highlighted in green)."></i>
-      <i id="icon2" class="fas fa-solid fa-fire" title="⚠️ ⚠️ Clear all cookies stored in Firefox without exceptions."></i>
-      <i id="icon3" class="fas fa-solid fa-radiation" title="⚠️ ⚠️ ⚠️ Clear all cookies, browsing history, cached images and files, autofill form data, download history, service workers, plugin data, saved passwords, local storage data, indexedDB data."></i>
+    <div id="icons-container">
+      <i id="icon1" class="fas fa-broom" title="⚠️ Remove cookies from closed tabs, keeping only those associated with currently open tabs (domains highlighted in green)"></i>
+      <i id="icon2" class="fas fa-fire" title="⚠️ ⚠️ Clear all cookies stored in Firefox without exceptions"></i>
+      <i id="icon3" class="fas fa-radiation" title="⚠️ ⚠️ ⚠️ Clear all cookies, browsing history, cached images and files, autofill form data, download history, service workers, plugin data, saved passwords, local storage data, indexedDB data"></i>
       <a href="settings.html" target="_blank">
-        <i id="icon4" class="fas fa-solid fa-gears" title="Access the configuration settings."></i>
+        <i id="icon4" class="fas fa-gears" title="Access the configuration settings"></i>
       </a>
     </div>
   </div>
