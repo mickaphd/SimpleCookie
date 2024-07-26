@@ -17,6 +17,7 @@ const defaultSettings = {
     numLevels: -2,
     enableGhostIcon: true,
     enableActiveTabHighlight: true,
+    enableSpecialJarIcon: true,
     showIconsContainer: true
 };
 
@@ -38,12 +39,14 @@ async function initializeSettings() {
         numLevels,
         enableGhostIcon,
         enableActiveTabHighlight,
+        enableSpecialJarIcon,
         showIconsContainer
     } = settings;
 
     // Set initial values for settings inputs
     document.getElementById('num-levels-input').value = numLevels;
     document.getElementById('enableGhostIcon').checked = enableGhostIcon;
+    document.getElementById('enableSpecialJarIcon').checked = enableSpecialJarIcon;
     document.getElementById('enableActiveTabHighlight').checked = enableActiveTabHighlight;
     document.getElementById('showIconsContainer').checked = showIconsContainer;
 
@@ -56,6 +59,11 @@ async function initializeSettings() {
     document.getElementById('enableGhostIcon').addEventListener('change', async function() {
         settings.enableGhostIcon = this.checked;
         await saveSettings({ enableGhostIcon: settings.enableGhostIcon });
+    });
+
+    document.getElementById('enableSpecialJarIcon').addEventListener('change', async function() {
+        settings.enableSpecialJarIcon = this.checked;
+        await saveSettings({ enableSpecialJarIcon: settings.enableSpecialJarIcon });
     });
 
     document.getElementById('enableActiveTabHighlight').addEventListener('change', async function() {

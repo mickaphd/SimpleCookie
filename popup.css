@@ -78,6 +78,12 @@ body {
     opacity: 0.8;
 }
 
+/* Container icon style */
+.container-icon {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
 /* Active tab icon style */
 .active-tab-icon {
     font-size: 9px;
@@ -85,7 +91,7 @@ body {
     color: #FE0179;
 }
 
-/* Bottom icons container style */
+/* Bottom shortcut icons container style */
 #icons-container {
     display: flex;
     justify-content: center;
@@ -118,7 +124,7 @@ body {
     }
 }
 
-/* Styles for the detailed cookie table */
+/* Style for the detailed cookie table */
 .cookie-table {
     border-collapse: collapse;
     font-size: 12.5px;

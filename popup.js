@@ -1,7 +1,7 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-// Initializing a Set to store tracking websites, arrays to hold cookies, and open browser tabs
+// Initializing a Set to store tracking websites, cookies and open tabs
 let trackingSites = new Set();
 let cookies = [];
 let tabs = [];
@@ -17,7 +17,20 @@ async function fetchTrackerDB() {
 
 // Fetches the current cookies and tabs data
 async function fetchCookiesAndTabs() {
-    cookies = await browser.cookies.getAll({});
+    const containers = await browser.contextualIdentities.query({});
+    const allCookies = [];
+
+    // Fetch cookies from the default container
+    const defaultCookies = await browser.cookies.getAll({});
+    allCookies.push(...defaultCookies);
+
+    // Fetch cookies from all special containers
+    for (const container of containers) {
+        const cookies = await browser.cookies.getAll({ storeId: container.cookieStoreId });
+        allCookies.push(...cookies);
+    }
+
+    cookies = allCookies; // Combine cookies from all containers
     tabs = await browser.tabs.query({});
 }
 
@@ -29,16 +42,16 @@ async function initExtension() {
     // Get settings from local storage with default values
     const defaultSettings = {
         enableGhostIcon: true,
+        enableSpecialJarIcon: true,
         enableActiveTabHighlight: true,
         showIconsContainer: true
     };
 
     const settings = await browser.storage.local.get(defaultSettings);
+    displayCookies(settings.enableGhostIcon, settings.enableSpecialJarIcon);
 
     // Save default settings if they don't exist
     await browser.storage.local.set(settings);
-
-    displayCookies(settings.enableGhostIcon);
 
     if (settings.enableActiveTabHighlight) {
         highlightActiveTabDomain();
@@ -68,24 +81,42 @@ function updateCookieDisplay(element, domain) {
     }
 }
 
+// Update the display of cookies to indicate cookies from non-default container with a container icon
+function updateContainerDisplay(element, domain) {
+    const nonDefaultContainerCookies = cookies.filter(cookie => cookie.storeId !== 'firefox-default');
+    const nonDefaultContainerDomains = new Set(nonDefaultContainerCookies.map(cookie => getMainDomain(cookie.domain)));
+
+    if (nonDefaultContainerDomains.has(getMainDomain(domain))) {
+        const icon = document.createElement('span');
+        icon.classList.add('fas', 'fa-border-all', 'container-icon');
+        element.appendChild(document.createTextNode(' '));
+        element.appendChild(icon);
+    }
+}
+
 // Function to highlight the active tab's domain in the popup
 function highlightActiveTabDomain() {
     const activeTab = tabs.find(tab => tab.active);
-    if (activeTab) {
-        const activeDomain = getMainDomain(new URL(activeTab.url).hostname);
-        const container = document.getElementById('cookies-container');
-        if (container) {
-            for (const element of container.childNodes) {
-                const domainText = element.textContent.trim().split(' ')[0];
-                const mainDomain = getMainDomain(domainText);
-                if (mainDomain === activeDomain) {
-                    const icon = document.createElement('i');
-                    icon.classList.add('fas', 'fa-play', 'active-tab-icon');
-                    icon.style.marginRight = '3px';
-                    element.insertBefore(icon, element.firstChild);
-                }
-            }
-        }
+    if (!activeTab) return;
+
+    const activeDomain = getMainDomain(new URL(activeTab.url).hostname);
+    const container = document.getElementById('cookies-container');
+    if (!container) return;
+
+    const activeIconClass = 'active-tab-icon';
+    const existingIcon = container.querySelector(`.${activeIconClass}`);
+    if (existingIcon) existingIcon.remove();
+
+    const activeElement = Array.from(container.childNodes).find(element => {
+        const domainText = element.textContent.trim().split(' ')[0];
+        return getMainDomain(domainText) === activeDomain;
+    });
+
+    if (activeElement) {
+        const icon = document.createElement('i');
+        icon.classList.add('fas', 'fa-play', activeIconClass);
+        icon.style.marginRight = '3px';
+        activeElement.insertBefore(icon, activeElement.firstChild);
     }
 }
 
@@ -130,15 +161,12 @@ function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
 // Function to delete cookies from closed tabs
 async function deleteCookiesFromClosedTabs(cookies) {
     await Promise.all(cookies.map(cookie =>
-        browser.cookies.remove({
-            url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`,
-            name: cookie.name
-        })
+        deleteCookie(cookie, `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`)
     ));
 }
 
 // Function to fetch and display cookies per website domain
-function displayCookies(enableGhostIcon) {
+function displayCookies(enableGhostIcon, enableSpecialJarIcon) {
     const openTabDomains = tabs.map(tab => {
         const hostname = new URL(tab.url).hostname;
         return {
@@ -165,6 +193,9 @@ function displayCookies(enableGhostIcon) {
             if (enableGhostIcon) {
                 updateCookieDisplay(element, website);
             }
+            if (enableSpecialJarIcon) {
+                updateContainerDisplay(element, website);
+            }
             if (openTabDomains.some(({ mainDomain }) => isDomainOrSubdomain(mainDomain, getMainDomain(website)))) {
                 element.style.color = '#04A65D';
             }
@@ -182,7 +213,7 @@ async function deleteCookiesWithMainDomain(cookies, mainDomain) {
         const urls = cookiesToDelete
             .filter(c => c.name === cookie.name)
             .map(c => `http${c.secure ? 's' : ''}://${c.domain}${c.path}`);
-        await Promise.all(urls.map(url => browser.cookies.remove({ url, name: cookie.name })));
+        await Promise.all(urls.map(url => deleteCookie(cookie, url)));
     }));
 }
 
@@ -193,8 +224,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     async function removeBrowsingData(options) {
         await browser.browsingData.remove({ since: 0 }, options);
         await fetchCookiesAndTabs();
-        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
-        displayCookies(settings.enableGhostIcon);
+        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight', 'enableSpecialJarIcon']);
+        displayCookies(settings.enableGhostIcon, settings.enableSpecialJarIcon);
         if (settings.enableActiveTabHighlight) {
             highlightActiveTabDomain();
         }
@@ -205,8 +236,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
         await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
         await fetchCookiesAndTabs();
-        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
-        displayCookies(settings.enableGhostIcon);
+        const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight', 'enableSpecialJarIcon']);
+        displayCookies(settings.enableGhostIcon, settings.enableSpecialJarIcon);
         if (settings.enableActiveTabHighlight) {
             highlightActiveTabDomain();
         }
@@ -239,8 +270,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             event.preventDefault();
             await deleteCookiesWithMainDomain(cookies, website);
             await fetchCookiesAndTabs();
-            const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight']);
-            displayCookies(settings.enableGhostIcon);
+            const settings = await browser.storage.local.get(['enableGhostIcon', 'enableActiveTabHighlight', 'enableSpecialJarIcon']);
+            displayCookies(settings.enableGhostIcon, settings.enableSpecialJarIcon);
             if (settings.enableActiveTabHighlight) {
                 highlightActiveTabDomain();
             }
@@ -271,7 +302,7 @@ function displayCookieDetails(mainDomain, cookies) {
         { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie.' },
         { title: 'Size', description: 'The size of the cookie in bytes using a function that encodes both the cookie name and value, where each character is assumed to be one byte.' },
         { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
-        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.'},
+        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
         { title: 'Secure Flag', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
         { title: 'HttpOnly Flag', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
         { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
@@ -288,10 +319,9 @@ function displayCookieDetails(mainDomain, cookies) {
 
     const addRow = (cookie) => {
         const row = table.insertRow();
-        const { name, value, domain, expirationDate, secure, httpOnly, sameSite } = cookie;
+        const { name, value, domain, expirationDate, secure, httpOnly, sameSite, storeId } = cookie;
         const cookieSize = calculateCookieSize({ name, value, domain, expirationDate, secure, httpOnly, sameSite });
 
-        // Correctly handle the SameSite attribute
         const sameSiteValue = sameSite === 'no_restriction' ? 'None' : sameSite === 'lax' ? 'Lax' : sameSite === 'strict' ? 'Strict' : 'None';
 
         let expirationDateFormatted = '';
@@ -318,7 +348,7 @@ function displayCookieDetails(mainDomain, cookies) {
 
         // Add event listeners for the row
         row.addEventListener('click', async function(event) {
-            await deleteCookie(cookie);
+            await deleteCookie(cookie, `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`);
             table.deleteRow(row.rowIndex);
         });
 
@@ -339,10 +369,11 @@ function displayCookieDetails(mainDomain, cookies) {
 }
 
 // Function to delete a cookie
-async function deleteCookie(cookie) {
+async function deleteCookie(cookie, url) {
     await browser.cookies.remove({
-        url: `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`,
-        name: cookie.name
+        url: url,
+        name: cookie.name,
+        storeId: cookie.storeId
     });
 }
 

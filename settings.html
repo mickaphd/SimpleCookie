@@ -5,8 +5,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleCookie</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -101,7 +102,7 @@
         <i class="fas fa-info-circle info-icon" title="Display a ghost icon for known tracking sites using an internal tracking database derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy."></i>
         <span>Highlight websites known to track your activity</span>
         <label>
-            <input type="checkbox" id="enableGhostIcon">
+            <input type="checkbox" id="enableGhostIcon" aria-label="Enable ghost icon for tracking sites">
         </label>
     </div>
 
@@ -109,22 +110,30 @@
         <i class="fas fa-info-circle info-icon" title="Display a small icon to the left of the listed website that corresponds to the tab that is active at the moment you call up the SimpleCookie pop-up."></i>
         <span>Highlight the active tab</span>
         <label>
-            <input type="checkbox" id="enableActiveTabHighlight">
+            <input type="checkbox" id="enableActiveTabHighlight" aria-label="Enable active tab highlight">
+        </label>
+    </div>
+
+    <div class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Display a container icon for websites that are opened or have been opened in a container tab other than the default one (only of interest if you use Firefox's Container Tabs feature)."></i>
+        <span>Highlight websites that are/were opened in a different container</span>
+        <label>
+            <input type="checkbox" id="enableSpecialJarIcon" aria-label="Enable highlight for container's websites">
         </label>
     </div>
 
     <div class="settings-section">
         <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu -> SimpleCookie -> Preferences/Options."></i>
-        <span>Show the shortcut icons in a bottom ribbon</span>
+        <span>Display the shortcut icons in a bottom ribbon</span>
         <label>
-            <input type="checkbox" id="showIconsContainer">
+            <input type="checkbox" id="showIconsContainer" aria-label="Show shortcut icons in bottom ribbon">
         </label>
     </div>
 
     <div class="settings-section">
         <i class="fas fa-info-circle info-icon" title="Select the level of main domain extraction from -1 to -4 (-2 is used by default). For example, with a value of -2, SimpleCookie won't differentiate between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to experiment and choose what works best for you."></i>
-        <span>Main domain extraction level</span>
-        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input">
+        <span>Change the main domain extraction level</span>
+        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input" aria-label="Main domain extraction level">
     </div>
 
     <br>
