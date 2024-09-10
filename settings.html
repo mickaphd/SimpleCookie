@@ -89,63 +89,110 @@
             gap: 20px;
         }
 
-        .footer-icons a {
-            text-decoration: none;
+        .footer-icons i {
             font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        /* Specific styles for the bolt icon */
+        .footer-icons .fa-bolt {
+            color: #F9E400;
+        }
+
+        /* Dynamic tip popup style */
+        #imagePopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 0px solid #ccc;
+            padding: 10px;
+            z-index: 1000;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        #imagePopup img {
+            border-radius: 0px;
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
         }
     </style>
 </head>
 <body>
     <h3 class="icon-text"><i class="fa-solid fa-gears"></i> <u>Settings</u></h3>
 
-    <div class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Display a ghost icon for known tracking sites using an internal tracking database derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy."></i>
-        <span>Highlight websites known to track your activity</span>
+    <section class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="A small icon will appear in front of the website corresponding to the tab that is active when you open the SimpleCookie pop-up."></i>
+        <span>Highlight the active tab ( <i class="fa-solid fa-play"></i> )</span>
         <label>
-            <input type="checkbox" id="enableGhostIcon" aria-label="Enable ghost icon for tracking sites">
+            <input type="checkbox" id="enableActiveTabHighlight" aria-label="Highlight the active tab">
         </label>
-    </div>
+    </section>
 
-    <div class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Display a small icon to the left of the listed website that corresponds to the tab that is active at the moment you call up the SimpleCookie pop-up."></i>
-        <span>Highlight the active tab</span>
+    <section class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Display a ghost icon for known tracking sites using an internal list derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy. These websites will always be listed in SimpleCookie, only the icon is optional."></i>
+        <span>Highlight websites known to track your activity ( <i class="fa-solid fa-ghost"></i> )</span>
         <label>
-            <input type="checkbox" id="enableActiveTabHighlight" aria-label="Enable active tab highlight">
+            <input type="checkbox" id="enableGhostIcon" aria-label="Highlight websites known to track your activity">
         </label>
-    </div>
+    </section>
 
-    <div class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Display a container icon for websites that are opened or have been opened in a container tab other than the default one (only of interest if you use Firefox's Container Tabs feature)."></i>
-        <span>Highlight websites that are/were opened in a different container</span>
+    <section class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Highlight websites that store cookies in special containers. Useful if you use Firefox's special container feature. These websites will always be listed in SimpleCookie, only the icon is optional."></i>
+        <span>Highlight websites that are/were opened in a special container ( <i class="fa-solid fa-road-barrier"></i> )</span>
         <label>
-            <input type="checkbox" id="enableSpecialJarIcon" aria-label="Enable highlight for container's websites">
+            <input type="checkbox" id="enableSpecialJarIcon" aria-label="Highlight websites opened in special containers">
         </label>
-    </div>
+    </section>
 
-    <div class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu -> SimpleCookie -> Preferences/Options."></i>
-        <span>Display the shortcut icons in a bottom ribbon</span>
+    <section class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information from many unrelated top-level sites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional."></i>
+        <span>Highlight websites with partitioned cookies ( <i class="fa-solid fa-code-branch"></i> )</span>
         <label>
-            <input type="checkbox" id="showIconsContainer" aria-label="Show shortcut icons in bottom ribbon">
+            <input type="checkbox" id="enablePartitionIcon" aria-label="Highlight websites with partitioned cookies">
         </label>
-    </div>
+    </section>
 
-    <div class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Select the level of main domain extraction from -1 to -4 (-2 is used by default). For example, with a value of -2, SimpleCookie won't differentiate between 'amazon.co.uk' and 'bbc.co.uk'. You'll just see 'co.uk'. To distinguish between them, consider using -3. Feel free to experiment and choose what works best for you."></i>
-        <span>Change the main domain extraction level</span>
-        <input type="number" min="-4" max="-1" value="-2" id="num-levels-input" aria-label="Main domain extraction level">
-    </div>
+    <section class="settings-section">
+        <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu > SimpleCookie > Preferences/Options."></i>
+        <span>Display the shortcut icons in a bottom ribbon ( <i class="fa-solid fa-broom"></i> <i class="fa-solid fa-fire"></i> <i class="fa-solid fa-radiation"></i> <i class="fa-solid fa-gears"></i> )</span>
+        <label>
+            <input type="checkbox" id="showIconsContainer" aria-label="Show the bottom ribbon with the four shortcut icons">
+        </label>
+    </section>
 
     <br>
     
     <div class="footer-icons">
-        <a href="https://github.com/mickaphd/SimpleCookie" target="_blank" title="SimpleCookie on GitHub">
+        <a href="https://github.com/mickaphd/SimpleCookie" target="_blank" title="SimpleCookie repository on GitHub.">
             <i class="fab fa-github"></i>
         </a>
-        <a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/" target="_blank" title="SimpleCookie for Firefox">
+        <a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/" target="_blank" title="SimpleCookie in the Firefox Add-ons store.">
             <i class="fab fa-firefox-browser"></i>
         </a>
+        <i class="fas fa-bolt" id="tipIcon" title="Tip me with bitcoin over the Lightning network (Bolt12 invoice). Thank you!"></i>
     </div>
+
+    <!-- Dynamic tip popup -->
+    <div id="imagePopup" style="text-align: center;">
+	<p style="margin-top: 2px; font-size: 12px; color: #333;"><b><i>Thank you for your support</i> ;-)</b></p>
+    	<img src="resources/lightning_bolt12.jpeg" style="max-width: 220px; height: auto;">
+    	<p style="margin-top: 2px; font-size: 12px; color: #333;">₿azuresync08@phoenixwallet.me</p>
+    </div>
+    <div id="overlay"></div>
 
     <script src="settings.js"></script>
 </body>

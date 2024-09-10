@@ -19,29 +19,6 @@ body {
     align-items: center;
 }
 
-/* Cookies container style */
-#cookies-container {
-    margin: 0;
-    max-height: 500px;
-    max-width: 100%;
-    overflow-y: auto;
-}
-
-/* Cookies list and hover effect */
-#cookies-container div {
-    text-align: left;
-    margin: 0;
-    border-radius: 0;
-    padding: 2px 5px;
-    color: var(--text-color);
-    white-space: nowrap;
-}
-
-#cookies-container div:hover {
-    background-color: var(--highlight-color);
-    cursor: pointer;
-}
-
 /* Light and dark theme settings */
 :root {
     --background-color: #FFF;
@@ -59,6 +36,28 @@ body {
     }
 }
 
+/* Cookies container style */
+#cookies-container {
+    margin: 0;
+    max-height: 500px;
+    max-width: 100%;
+    overflow-y: auto;
+}
+
+/* Cookies list and hover effect */
+#cookies-container div {
+    text-align: left;
+    margin: 0;
+    padding: 2px 5px;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+#cookies-container div:hover {
+    background-color: var(--highlight-color);
+    cursor: pointer;
+}
+
 /* Icon color settings based on theme */
 @media (prefers-color-scheme: light) {
     #icons-container i {
@@ -72,26 +71,21 @@ body {
     }
 }
 
-/* Ghost icon style */
-.ghost-icon {
+/* Icon styles */
+.ghost-icon,
+.container-icon,
+.partition-icon {
     font-size: 12px;
     opacity: 0.8;
 }
 
-/* Container icon style */
-.container-icon {
-    font-size: 12px;
-    opacity: 0.8;
-}
-
-/* Active tab icon style */
 .active-tab-icon {
     font-size: 9px;
     opacity: 0.8;
     color: #FE0179;
 }
 
-/* Bottom shortcut icons container style */
+/* Bottom icons container style */
 #icons-container {
     display: flex;
     justify-content: center;
@@ -127,7 +121,7 @@ body {
 /* Style for the detailed cookie table */
 .cookie-table {
     border-collapse: collapse;
-    font-size: 12.5px;
+    font-size: 12px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     table-layout: fixed;
     width: 100%;
@@ -161,4 +155,49 @@ body {
         background-color: #333;
         color: white;
     }
+}
+
+/* Style for the confirmation dialogue box */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: none;
+    margin: auto;
+    padding: 20px;
+    border: none;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 26px;
+    margin: 2px;
+}
+
+#confirm-yes i,
+#confirm-no i {
+    color: white;
+}
+
+#confirm-yes:hover i {
+    color: #04A65D;
+}
+
+#confirm-no:hover i {
+    color: #FE0179;
 }

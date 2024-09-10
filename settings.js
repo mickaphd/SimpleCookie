@@ -14,10 +14,10 @@ document.body.style.cssText = `
 
 // Default settings
 const defaultSettings = {
-    numLevels: -2,
     enableGhostIcon: true,
     enableActiveTabHighlight: true,
     enableSpecialJarIcon: true,
+    enablePartitionIcon: true,
     showIconsContainer: true
 };
 
@@ -36,26 +36,21 @@ async function loadSettings() {
 async function initializeSettings() {
     const settings = await loadSettings();
     const {
-        numLevels,
         enableGhostIcon,
         enableActiveTabHighlight,
         enableSpecialJarIcon,
+        enablePartitionIcon,
         showIconsContainer
     } = settings;
 
     // Set initial values for settings inputs
-    document.getElementById('num-levels-input').value = numLevels;
     document.getElementById('enableGhostIcon').checked = enableGhostIcon;
     document.getElementById('enableSpecialJarIcon').checked = enableSpecialJarIcon;
+    document.getElementById('enablePartitionIcon').checked = enablePartitionIcon;
     document.getElementById('enableActiveTabHighlight').checked = enableActiveTabHighlight;
     document.getElementById('showIconsContainer').checked = showIconsContainer;
 
     // Event listeners for settings changes
-    document.getElementById('num-levels-input').addEventListener('input', async function() {
-        settings.numLevels = this.value;
-        await saveSettings({ numLevels: settings.numLevels });
-    });
-
     document.getElementById('enableGhostIcon').addEventListener('change', async function() {
         settings.enableGhostIcon = this.checked;
         await saveSettings({ enableGhostIcon: settings.enableGhostIcon });
@@ -64,6 +59,11 @@ async function initializeSettings() {
     document.getElementById('enableSpecialJarIcon').addEventListener('change', async function() {
         settings.enableSpecialJarIcon = this.checked;
         await saveSettings({ enableSpecialJarIcon: settings.enableSpecialJarIcon });
+    });
+
+    document.getElementById('enablePartitionIcon').addEventListener('change', async function() {
+        settings.enablePartitionIcon = this.checked;
+        await saveSettings({ enablePartitionIcon: settings.enablePartitionIcon });
     });
 
     document.getElementById('enableActiveTabHighlight').addEventListener('change', async function() {
@@ -76,6 +76,18 @@ async function initializeSettings() {
         await saveSettings({ showIconsContainer: settings.showIconsContainer });
     });
 }
+
+// Event listener for the tip bolt icon
+document.getElementById('tipIcon').addEventListener('click', function() {
+    document.getElementById('imagePopup').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+});
+
+// Close the tip qrcode when clicking outside of it
+document.getElementById('overlay').addEventListener('click', function() {
+    document.getElementById('imagePopup').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+});
 
 // Initialize settings on page load
 document.addEventListener('DOMContentLoaded', initializeSettings);
