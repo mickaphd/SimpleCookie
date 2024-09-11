@@ -29,21 +29,21 @@ async function fetchCookiesFromStore(storeId) {
 async function fetchAllCookies() {
     const containers = await browser.contextualIdentities.query({});
     const cookiePromises = containers.map(container => fetchCookiesFromStore(container.cookieStoreId));
-    
+
     // Include cookies from the default store
     cookiePromises.push(fetchCookiesFromStore(""));
 
     const allCookies = (await Promise.all(cookiePromises)).flat();
 
-    // Use a Map to filter out duplicate cookies based on name, domain, and storeId
+    // Use a Map to filter out duplicate cookies based on the specified attributes
     const uniqueCookiesMap = new Map();
     allCookies.forEach(cookie => {
-        const key = `${cookie.name}|${cookie.domain}|${cookie.storeId}`;
+        const key = `${cookie.name}|${cookie.value}|${cookie.size}|${cookie.domain}|${cookie.expirationDate}|${cookie.secure}|${cookie.httpOnly}|${cookie.sameSite}`;
         if (!uniqueCookiesMap.has(key)) {
             uniqueCookiesMap.set(key, cookie);
         }
     });
-    
+
     return Array.from(uniqueCookiesMap.values());
 }
 

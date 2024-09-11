@@ -104,7 +104,7 @@ body {
 #icons-container i:hover {
     opacity: 1;
     color: #FE0179;
-    transform: scale(1.2);
+    transform: scale(1.1);
 }
 
 /* Special color for icon4 on hover */
