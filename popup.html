@@ -15,13 +15,14 @@
 <body>
     <div id="popup">
         <div id="cookies-container"></div>
-        <div id="icons-container" aria-label="Shortcut icons for drastic cookie management actions">
+        <div id="icons-container" aria-label="Shortcut icons for quick cookie management actions and access to settings">
             <i id="icon1" class="fas fa-broom" title="⚠️ Remove cookies from closed tabs, keeping only those associated with currently open tabs (whose domains are highlighted in green)." aria-label="Remove cookies from closed tabs"></i>
             <i id="icon2" class="fas fa-fire" title="⚠️ ⚠️ Clear all cookies stored in Firefox without exceptions." aria-label="Clear all cookies"></i>
             <i id="icon3" class="fas fa-radiation" title="⚠️ ⚠️ ⚠️ Clear all cookies, browsing history, cached images and files, autofill form data (including names, email addresses and passwords suggestions), download history, service workers, plugin data, local storage data, indexedDB data." aria-label="Clear all data"></i>
             <a href="settings.html" target="_blank" aria-label="Access the configuration settings">
                 <i id="icon4" class="fas fa-gears" title="Access the configuration settings and help section."></i>
             </a>
+            <i id="icon5" class="fas fa-backward" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent the restoration." aria-label="Undo the last cookie deletion" style="display:none;"></i>
         </div>
     </div>
     <div id="confirmation-modal" class="modal">

@@ -1,14 +1,14 @@
-/* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
+/* SimpleCookie: a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-/* Default style */
+/* Default style for all elements */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Default font and background color */
+/* Body styles */
 body {
     padding-top: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -36,7 +36,7 @@ body {
     }
 }
 
-/* Cookies container style */
+/* Cookies container styles */
 #cookies-container {
     margin: 0;
     max-height: 500px;
@@ -44,11 +44,11 @@ body {
     overflow-y: auto;
 }
 
-/* Cookies list and hover effect */
+/* Cookies list styles */
 #cookies-container div {
     text-align: left;
     margin: 0;
-    padding: 2px 5px;
+    padding: 2.2px 5px;
     color: var(--text-color);
     white-space: nowrap;
 }
@@ -58,20 +58,20 @@ body {
     cursor: pointer;
 }
 
-/* Icon color settings based on theme */
+/* Icon colors based on theme */
 @media (prefers-color-scheme: light) {
-    #icons-container i {
+    #icon1, #icon2, #icon3, #icon4 {
         color: var(--icon-color-light);
     }
 }
 
 @media (prefers-color-scheme: dark) {
-    #icons-container i {
+    #icon1, #icon2, #icon3, #icon4 {
         color: var(--icon-color-dark);
     }
 }
 
-/* Icon styles */
+/* Ghost/Container/Partition icon styles */
 .ghost-icon,
 .container-icon,
 .partition-icon {
@@ -80,12 +80,12 @@ body {
 }
 
 .active-tab-icon {
-    font-size: 9px;
+    font-size: 10px;
     opacity: 0.8;
     color: #FE0179;
 }
 
-/* Bottom icons container style */
+/* Bottom icons container styles */
 #icons-container {
     display: flex;
     justify-content: center;
@@ -98,27 +98,44 @@ body {
 #icons-container i {
     margin: 0 6px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Default opacity for icons 1, 2, 3 and 4 */
+#icon1, #icon2, #icon3, #icon4 {
     opacity: 0.2;
 }
 
-#icons-container i:hover {
+/* Hover effects for icons 1, 2 and 3 */
+#icon1:hover,
+#icon2:hover,
+#icon3:hover {
     opacity: 1;
     color: #FE0179;
-    transform: scale(1.1);
 }
 
-/* Special color for icon4 on hover */
-#icon4:hover::before {
+/* Icon 4 special hover effect */
+#icon4:hover {
+    opacity: 1;
     color: black;
 }
 
+/* Dark mode hover color for icon 4 */
 @media (prefers-color-scheme: dark) {
-    #icon4:hover::before {
+    #icon4:hover {
         color: white;
     }
 }
 
-/* Style for the detailed cookie table */
+/* Icon 5 special style */
+#icon5 {
+    display: inline-flex;
+    color: #FE0179;
+    opacity: 1;
+}
+
+/* Cookie table styles */
 .cookie-table {
     border-collapse: collapse;
     font-size: 12px;
@@ -157,7 +174,7 @@ body {
     }
 }
 
-/* Style for the confirmation dialogue box */
+/* Confirmation dialogue box styles */
 .modal {
     display: none;
     position: fixed;
@@ -181,23 +198,20 @@ body {
     height: 100%;
 }
 
+/* Yes and No confirmation button styles */
 .icon-button {
     background: none;
     border: none;
+    color: white;
     cursor: pointer;
     font-size: 26px;
     margin: 2px;
 }
 
-#confirm-yes i,
-#confirm-no i {
-    color: white;
-}
-
 #confirm-yes:hover i {
-    color: #04A65D;
+    color: #04A65D; /* Color on hover */
 }
 
 #confirm-no:hover i {
-    color: #FE0179;
+    color: #FE0179; /* Color on hover */
 }

@@ -5,6 +5,8 @@
 let trackingSites = new Set();
 let cookies = [];
 let tabs = [];
+let tempDeletedCookies = []; // Temporary storage for deleted cookies
+let undoTimeout; // Timeout for undo action
 
 
 // ==================== FETCHING THE DATA ====================
@@ -29,16 +31,12 @@ async function fetchCookiesFromStore(storeId) {
 async function fetchAllCookies() {
     const containers = await browser.contextualIdentities.query({});
     const cookiePromises = containers.map(container => fetchCookiesFromStore(container.cookieStoreId));
-
-    // Include cookies from the default store
     cookiePromises.push(fetchCookiesFromStore(""));
 
     const allCookies = (await Promise.all(cookiePromises)).flat();
-
-    // Use a Map to filter out duplicate cookies based on the specified attributes
     const uniqueCookiesMap = new Map();
     allCookies.forEach(cookie => {
-        const key = `${cookie.name}|${cookie.value}|${cookie.size}|${cookie.domain}|${cookie.expirationDate}|${cookie.secure}|${cookie.httpOnly}|${cookie.sameSite}`;
+        const key = `${cookie.name}|${cookie.value}|${cookie.size}|${cookie.domain}|${cookie.partitionKey}|${cookie.expirationDate}|${cookie.secure}|${cookie.httpOnly}|${cookie.sameSite}`;
         if (!uniqueCookiesMap.has(key)) {
             uniqueCookiesMap.set(key, cookie);
         }
@@ -101,7 +99,6 @@ initExtension();
 
 // Displays the websites and cookies based on user settings
 function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
-    // Get the domains of currently open tabs
     const openTabDomains = tabs.map(tab => {
         const hostname = new URL(tab.url).hostname;
         return {
@@ -167,7 +164,7 @@ function highlightActiveTabDomain() {
 
     const activeIconClass = 'active-tab-icon';
     const existingIcon = container.querySelector(`.${activeIconClass}`);
-    if (existingIcon) existingIcon.remove(); // Remove existing active tab icon
+    if (existingIcon) existingIcon.remove();
 
     // Find the element corresponding to the active tab's domain
     const activeElement = Array.from(container.childNodes).find(element => {
@@ -200,15 +197,15 @@ function displayCookieDetails(mainDomain, cookies) {
 
     // Define table headers and their descriptions
     const headers = [
-        { title: 'Name', description: 'The name of the cookie, which is used to identify it when sent between the client and the server.' },
-        { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie.' },
-        { title: 'Size', description: 'The size of the cookie in bytes using a function that encodes both the cookie name and value, where each character is assumed to be one byte.' },
-        { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
-        { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS). Without cookie partitioning, third-party cookies can track users across the web. CHIPS, on the other hand, are restricted to the specific site on which they are set, preventing cross-site tracking while still allowing useful functions such as maintaining state across a domain and its subdomains.' },
-        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
-        { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
-        { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
-        { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
+        { title: 'Name', description: 'The name of the cookie.' },
+        { title: 'Value', description: 'The value of the cookie.' },
+        { title: 'Size', description: 'The size of the cookie.' },
+        { title: 'Domain', description: 'The domain for which the cookie is valid.' },
+        { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS).' },
+        { title: 'Expiration', description: 'The date on which the cookie will expire.' },
+        { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure connections.' },
+        { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript.' },
+        { title: 'SameSite', description: 'Controls when the cookie will be sent in cross-site requests.' }
     ];
 
     const headerRow = table.insertRow();
@@ -319,12 +316,64 @@ async function deleteCookies(filterFn) {
 
 // Function to delete all cookies from a specific domain
 async function deleteAllCookiesForDomain(domain) {
+    const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
+    tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
     await deleteCookies(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
+    showUndoIcon(); // Show undo icon after deletion
 }
 
 // Function to delete cookies from closed tabs
 async function deleteCookiesFromClosedTabs(closedTabsCookies) {
     await deleteCookies(cookie => closedTabsCookies.includes(cookie));
+}
+
+// Function to undo the very last cookie deletion 
+async function undoLastDeletion() {
+    if (tempDeletedCookies.length > 0) {
+        await Promise.all(tempDeletedCookies.map(cookie => {
+            return browser.cookies.set({
+                url: getCookieUrl(cookie),
+                name: cookie.name,
+                value: cookie.value,
+                expirationDate: cookie.expirationDate,
+                secure: cookie.secure,
+                httpOnly: cookie.httpOnly,
+                sameSite: cookie.sameSite,
+                storeId: cookie.storeId,
+                partitionKey: cookie.partitionKey
+            });
+        }));
+
+        tempDeletedCookies = []; 
+        await fetchCookiesAndTabs(); 
+        displayCookies(true, true, true); 
+        
+        // Highlight the active tab domain after restoring cookies
+        highlightActiveTabDomain();
+
+        // Show the settings icon again and hide the revert icon
+        const settingsIcon = document.getElementById('icon4');
+        const undoIcon = document.getElementById('icon5');
+        settingsIcon.style.display = 'inline-flex'; // Show settings icon
+        undoIcon.style.display = 'none'; // Hide undo icon
+    }
+}
+
+// Function to handle the undo icon visibility and timeout
+function showUndoIcon() {
+    const settingsIcon = document.getElementById('icon4');
+    const undoIcon = document.getElementById('icon5');
+
+    // Swap icons
+    settingsIcon.style.display = 'none'; // Hide settings icon
+    undoIcon.style.display = 'inline-flex'; // Show undo icon
+    
+    clearTimeout(undoTimeout);
+    undoTimeout = setTimeout(() => {
+        settingsIcon.style.display = 'inline-flex'; // Show settings icon again
+        undoIcon.style.display = 'none'; // Hide undo icon
+        tempDeletedCookies = []; // Clear the temp storage after timeout
+    }, 20000); // 20000 milliseconds = 20 seconds
 }
 
 
@@ -338,6 +387,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const icon1 = document.getElementById('icon1');
     const icon2 = document.getElementById('icon2');
     const icon3 = document.getElementById('icon3');
+    const icon5 = document.getElementById('icon5');
 
     // Helper function to update cookies and tabs display
     async function updateDisplay() {
@@ -418,6 +468,20 @@ document.addEventListener('DOMContentLoaded', async function () {
             await displayCookieDetails(website, cookies);
         }
     });
+
+    // Event listener for icon5 to undo the very last cookie deletion
+    icon5.addEventListener('click', async () => {
+        await undoLastDeletion();
+    });
+
+    cookiesContainer.addEventListener('click', async (event) => {
+        const target = event.target;
+        if (target && target.tagName === 'DIV') {
+            const domain = target.textContent.split(' ')[0];
+            await deleteAllCookiesForDomain(domain);
+            target.remove();
+        }
+    });
 });
 
 
@@ -475,15 +539,15 @@ const specialSLDs = {
         'info.bd', 'co.bd', 'gov.bd', 'mil.bd', 'tv.bd'
     ],
     Brazil: [
-    	'app.br', 'art.br', 'com.br', 'dev.br', 'eco.br',
-   	'emp.br', 'log.br', 'net.br', 'ong.br', 'seg.br',
-    	'edu.br', 'blog.br', 'flog.br', 'nom.br', 'vlog.br',
-    	'wiki.br', 'agr.br', 'esp.br', 'etc.br', 'far.br',
-    	'imb.br', 'ind.br', 'inf.br', 'radio.br', 'rec.br',
-    	'srv.br', 'tmp.br', 'tur.br', 'tv.br', 'am.br',
-    	'coop.br', 'fm.br', 'g12.br', 'gov.br', 'mil.br',
-    	'org.br', 'psi.br', 'b.br', 'def.br', 'jus.br',
-    	'leg.br', 'mp.br', 'tc.br' 
+        'app.br', 'art.br', 'com.br', 'dev.br', 'eco.br',
+        'emp.br', 'log.br', 'net.br', 'ong.br', 'seg.br',
+        'edu.br', 'blog.br', 'flog.br', 'nom.br', 'vlog.br',
+        'wiki.br', 'agr.br', 'esp.br', 'etc.br', 'far.br',
+        'imb.br', 'ind.br', 'inf.br', 'radio.br', 'rec.br',
+        'srv.br', 'tmp.br', 'tur.br', 'tv.br', 'am.br',
+        'coop.br', 'fm.br', 'g12.br', 'gov.br', 'mil.br',
+        'org.br', 'psi.br', 'b.br', 'def.br', 'jus.br',
+        'leg.br', 'mp.br', 'tc.br' 
     ],
 
     France: [
@@ -527,8 +591,7 @@ const specialSLDs = {
         'gr.jp', 'lg.jp', 'ne.jp', 'or.jp'
     ],
     Russia: [
-        'ac.ru', 'com.ru', 'edu.ru', 'gov.ru', 'int.ru',
-        'mil.ru', 'net.ru', 'org.ru', 'pp.ru',
+        'ac.ru', 'com.ru', 'edu.ru', 'gov.ru', 'int.ru', 'mil.ru', 'net.ru', 'org.ru', 'pp.ru',
     ],
     South_Africa: [
         'ac.za', 'co.za', 'edu.za', 'gov.za', 'law.za',

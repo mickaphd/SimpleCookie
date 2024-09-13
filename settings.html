@@ -97,7 +97,7 @@
 
         /* Specific styles for the bolt icon */
         .footer-icons .fa-bolt {
-            color: #F9E400;
+            color: #F7CA18;
         }
 
         /* Dynamic tip popup style */
@@ -135,8 +135,8 @@
     <h3 class="icon-text"><i class="fa-solid fa-gears"></i> <u>Settings</u></h3>
 
     <section class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="A small icon will appear in front of the website corresponding to the tab that is active when you open the SimpleCookie pop-up."></i>
-        <span>Highlight the active tab ( <i class="fa-solid fa-play"></i> )</span>
+        <i class="fas fa-info-circle info-icon" title="An indicator will appear next to the website corresponding to the active tab when you open the SimpleCookie pop-up, allowing you to easily locate and delete the cookies for the current website."></i>
+        <span>Highlight the active tab ( <i class="fa-solid fa-play" style="opacity: 0.8; color:#FE0179""></i> )</span>
         <label>
             <input type="checkbox" id="enableActiveTabHighlight" aria-label="Highlight the active tab">
         </label>
@@ -144,7 +144,7 @@
 
     <section class="settings-section">
         <i class="fas fa-info-circle info-icon" title="Display a ghost icon for known tracking sites using an internal list derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy. These websites will always be listed in SimpleCookie, only the icon is optional."></i>
-        <span>Highlight websites known to track your activity ( <i class="fa-solid fa-ghost"></i> )</span>
+        <span>Highlight websites known to track your activity ( <i class="fa-solid fa-ghost" style="opacity: 0.8;"></i> )</span>
         <label>
             <input type="checkbox" id="enableGhostIcon" aria-label="Highlight websites known to track your activity">
         </label>
@@ -152,7 +152,7 @@
 
     <section class="settings-section">
         <i class="fas fa-info-circle info-icon" title="Highlight websites that store cookies in special containers. Useful if you use Firefox's special container feature. These websites will always be listed in SimpleCookie, only the icon is optional."></i>
-        <span>Highlight websites that are/were opened in a special container ( <i class="fa-solid fa-road-barrier"></i> )</span>
+        <span>Highlight websites that are/were opened in a special container ( <i class="fa-solid fa-road-barrier" style="opacity: 0.8;"></i> )</span>
         <label>
             <input type="checkbox" id="enableSpecialJarIcon" aria-label="Highlight websites opened in special containers">
         </label>
@@ -160,19 +160,19 @@
 
     <section class="settings-section">
         <i class="fas fa-info-circle info-icon" title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information from many unrelated top-level sites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional."></i>
-        <span>Highlight websites with partitioned cookies ( <i class="fa-solid fa-code-branch"></i> )</span>
+        <span>Highlight websites with partitioned cookies ( <i class="fa-solid fa-code-branch" style="opacity: 0.8;"></i> )</span>
         <label>
             <input type="checkbox" id="enablePartitionIcon" aria-label="Highlight websites with partitioned cookies">
         </label>
     </section>
 
     <section class="settings-section">
-        <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four shortcut icons. If you deactivate it and want to return to the settings menu, go to the Firefox Add-ons menu > SimpleCookie > Preferences/Options."></i>
-        <span>Display the shortcut icons in a bottom ribbon ( <i class="fa-solid fa-broom"></i> <i class="fa-solid fa-fire"></i> <i class="fa-solid fa-radiation"></i> <i class="fa-solid fa-gears"></i> )</span>
+        <i class="fas fa-info-circle info-icon" title="Show the bottom ribbon with the four action/shortcut icons. Disabling this ribbon will prevent you from undoing a deletion if you accidentally click on a website in the SimpleCookie pop-up. Also, if you disable it and want to return to the Settings menu, navigate to the Firefox Add-ons menu > SimpleCookie > Preferences/Options."></i>
+        <span>Display the action/shortcut icons in the bottom ribbon ( <i class="fa-solid fa-broom" style="opacity: 0.2;"></i>  <i class="fa-solid fa-fire" style="opacity: 0.2;"></i> <i class="fa-solid fa-radiation" style="opacity: 0.2;"></i> <i class="fa-solid fa-gears" style="opacity: 0.2;"></i> <i class="fa-solid fa-backward" style="opacity: 1; color:#FE0179"></i> )</span>
         <label>
             <input type="checkbox" id="showIconsContainer" aria-label="Show the bottom ribbon with the four shortcut icons">
         </label>
-    </section>
+    </section>				
 
     <br>
     
