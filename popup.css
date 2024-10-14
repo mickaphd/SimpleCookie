@@ -1,7 +1,7 @@
-/* SimpleCookie: a minimalist yet efficient cookie manager for Firefox */
+/* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-/* Default style for all elements */
+/* Default style */
 * {
     margin: 0;
     padding: 0;
@@ -36,15 +36,16 @@ body {
     }
 }
 
-/* Cookies container styles */
+/* Cookie container style */
 #cookies-container {
     margin: 0;
     max-height: 500px;
     max-width: 100%;
     overflow-y: auto;
+    margin-bottom: 0px;
 }
 
-/* Cookies list styles */
+/* Cookie list style */
 #cookies-container div {
     text-align: left;
     margin: 0;
@@ -71,7 +72,7 @@ body {
     }
 }
 
-/* Ghost/Container/Partition icon styles */
+/* Appearance icon style */
 .ghost-icon,
 .container-icon,
 .partition-icon {
@@ -85,8 +86,8 @@ body {
     color: #FE0179;
 }
 
-/* Bottom icons container styles */
-#icons-container {
+/* Dock style */
+#dock {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -95,7 +96,7 @@ body {
     width: 100%; 
 }
 
-#icons-container i {
+#dock i {
     margin: 0 6px;
     cursor: pointer;
     display: inline-flex;
@@ -135,7 +136,7 @@ body {
     opacity: 1;
 }
 
-/* Cookie table styles */
+/* Cookie table style */
 .cookie-table {
     border-collapse: collapse;
     font-size: 12px;
@@ -174,7 +175,7 @@ body {
     }
 }
 
-/* Confirmation dialogue box styles */
+/* Confirmation dialogue box style */
 .modal {
     display: none;
     position: fixed;
@@ -198,7 +199,7 @@ body {
     height: 100%;
 }
 
-/* Yes and No confirmation button styles */
+/* Yes and No confirmation button style */
 .icon-button {
     background: none;
     border: none;
@@ -209,9 +210,9 @@ body {
 }
 
 #confirm-yes:hover i {
-    color: #04A65D; /* Color on hover */
+    color: #04A65D;
 }
 
 #confirm-no:hover i {
-    color: #FE0179; /* Color on hover */
+    color: #FE0179;
 }

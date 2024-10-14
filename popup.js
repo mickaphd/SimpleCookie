@@ -1,33 +1,44 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka */
 
-// Initializing a Set to store tracking websites, cookies, and open tabs
-let trackingSites = new Set();
-let cookies = [];
-let tabs = [];
-let tempDeletedCookies = []; // Temporary storage for deleted cookies
-let undoTimeout; // Timeout for undo action
+
+// ==================== INITIALIZATION OF VARIABLES ====================
+
+// Set to hold unique tracking domains
+let trackingSites = new Set(); 
+
+// Array to store cookie objects
+let cookies = []; 
+
+// Array to store tab objects
+let tabs = []; 
+
+// Array to keep track of cookies that have been deleted for potential undo
+let tempDeletedCookies = []; 
+
+// Variable to manage the timeout for the undo action
+let undoTimeout; 
+
 
 
 // ==================== FETCHING THE DATA ====================
 
 // Fetches the list of tracking websites from the local database
 async function fetchTrackerDB() {
-    if (trackingSites.size === 0) {
-        const response = await fetch(browser.runtime.getURL('resources/trackerdb.txt'));
-        const text = await response.text();
-        trackingSites = new Set(text.split('\n').map(domain => domain.trim()).filter(Boolean));
-    }
+    if (trackingSites.size > 0) return;
+    const response = await fetch(browser.runtime.getURL('resources/trackerdb.txt'));
+    const text = await response.text();
+    trackingSites = new Set(text.split('\n').map(domain => domain.trim()).filter(Boolean));
 }
 
-// Fetches all cookies from a specified store (container or default)
+// Fetches all cookies from a specified store
 async function fetchCookiesFromStore(storeId) {
     const normalCookies = await browser.cookies.getAll({ storeId });
     const partitionedCookies = await browser.cookies.getAll({ storeId, partitionKey: {} });
     return [...normalCookies, ...partitionedCookies];
 }
 
-// Fetches all cookies from all containers and the default store
+// Fetches all cookies from all containers
 async function fetchAllCookies() {
     const containers = await browser.contextualIdentities.query({});
     const cookiePromises = containers.map(container => fetchCookiesFromStore(container.cookieStoreId));
@@ -36,7 +47,8 @@ async function fetchAllCookies() {
     const allCookies = (await Promise.all(cookiePromises)).flat();
     const uniqueCookiesMap = new Map();
     allCookies.forEach(cookie => {
-        const key = `${cookie.name}|${cookie.value}|${cookie.size}|${cookie.domain}|${cookie.partitionKey}|${cookie.expirationDate}|${cookie.secure}|${cookie.httpOnly}|${cookie.sameSite}`;
+        const { name, value, size, domain, partitionKey, expirationDate, secure, httpOnly, sameSite } = cookie;
+        const key = `${name}|${value}|${size}|${domain}|${partitionKey}|${expirationDate}|${secure}|${httpOnly}|${sameSite}`;
         if (!uniqueCookiesMap.has(key)) {
             uniqueCookiesMap.set(key, cookie);
         }
@@ -57,23 +69,39 @@ async function fetchData() {
 }
 
 
+
 // ==================== APPLYING THE SETTINGS ====================
 
-// Apply user settings from storage and updates the UI accordingly
+// Apply user settings from storage
 async function applySettings() {
     const defaultSettings = {
         enableGhostIcon: true,
         enableSpecialJarIcon: true,
         enablePartitionIcon: true,
         enableActiveTabHighlight: true,
-        showIconsContainer: true,
+        showDock: true,
+        mycleanerCookies: true,
+        mycleanerBrowsingHistory: true,
+        mycleanerCache: false,
+        mycleanerAutofill: false,
+        mycleanerDownloadHistory: true,
+        mycleanerService: false,
+        mycleanerPlugin: false,
+        mycleanerLocal: false,
+        mycleanerIndexed: false,
+        mycleanerPasswords: false
+
     };
 
-    // Get settings from storage and set defaults if not present
+    // Get settings from storage and merge with defaults
     const storedSettings = await browser.storage.local.get(defaultSettings);
-    await browser.storage.local.set(storedSettings);
+    const settings = { ...defaultSettings, ...storedSettings };
+    await browser.storage.local.set(settings);
 
-    const { enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableActiveTabHighlight, showIconsContainer } = storedSettings;
+    const { enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableActiveTabHighlight, showDock, 
+            mycleanerCookies, mycleanerBrowsingHistory, mycleanerCache, mycleanerAutofill, 
+            mycleanerDownloadHistory, mycleanerService, mycleanerPlugin, 
+            mycleanerLocal, mycleanerIndexed, mycleanerPasswords } = settings;
 
     // Display cookies based on user preferences
     displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon);
@@ -81,8 +109,8 @@ async function applySettings() {
     // Highlight the active tab domain if enabled
     if (enableActiveTabHighlight) highlightActiveTabDomain();
 
-    // Show or hide the icons container based on settings
-    document.getElementById('icons-container').style.display = showIconsContainer ? 'block' : 'none';
+    // Show or hide the Dock based on settings
+    document.getElementById('dock').style.display = showDock ? 'block' : 'none';
 }
 
 // Initializes the extension by fetching data and applying settings
@@ -91,16 +119,17 @@ async function initExtension() {
     await applySettings();
 }
 
-// Call the initExtension function when the popup is opened
-initExtension();
+// Call the initExtension function when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initExtension);
+
 
 
 // ==================== DISPLAYING THE DATA ====================
 
 // Displays the websites and cookies based on user settings
 function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
-    const openTabDomains = tabs.map(tab => {
-        const hostname = new URL(tab.url).hostname;
+    const openTabDomains = tabs.map(({ url }) => {
+        const hostname = new URL(url).hostname;
         return {
             hostname,
             mainDomain: getMainDomain(hostname)
@@ -127,7 +156,7 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             const element = document.createElement('div');
             element.textContent = `${website} (${count})`;
 
-            // Update icons based on user settings
+            // Display icons based on user settings
             if (enableGhostIcon) updateIcon(element, website, 'fas fa-ghost ghost-icon', trackingSites.has(website));
             if (enableSpecialJarIcon) updateIcon(element, website, 'fas fa-road-barrier container-icon', nonDefaultContainerDomains.has(getMainDomain(website)));
             if (enablePartitionIcon) updateIcon(element, website, 'fas fa-code-branch partition-icon', partitionedDomains.has(getMainDomain(website)));
@@ -143,7 +172,7 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
     container.appendChild(fragment);
 }
 
-// Generic function to update icons
+// Generic function to update the icons
 function updateIcon(element, domain, iconClass, condition) {
     if (condition) {
         const icon = document.createElement('span');
@@ -182,6 +211,7 @@ function highlightActiveTabDomain() {
 }
 
 
+
 // ==================== DETAILED TABLE ====================
 
 // Displays detailed cookie information in a table format
@@ -197,15 +227,15 @@ function displayCookieDetails(mainDomain, cookies) {
 
     // Define table headers and their descriptions
     const headers = [
-        { title: 'Name', description: 'The name of the cookie.' },
-        { title: 'Value', description: 'The value of the cookie.' },
-        { title: 'Size', description: 'The size of the cookie.' },
-        { title: 'Domain', description: 'The domain for which the cookie is valid.' },
-        { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS).' },
-        { title: 'Expiration', description: 'The date on which the cookie will expire.' },
-        { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure connections.' },
-        { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript.' },
-        { title: 'SameSite', description: 'Controls when the cookie will be sent in cross-site requests.' }
+        { title: 'Name', description: 'The name of the cookie, which is used to identify it when sent between the client and the server.' },
+        { title: 'Value', description: 'The value of the cookie, which is the data stored within the cookie.' },
+        { title: 'Size', description: 'The size of the cookie in bytes using a function that encodes both the cookie name and value, where each character is assumed to be one byte.' },
+        { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
+        { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS). Without cookie partitioning, third-party cookies can track users across the web. CHIPS, on the other hand, are restricted to the specific site on which they are set, preventing cross-site tracking while still allowing useful functions such as maintaining state across a domain and its subdomains.' },
+        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
+        { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
+        { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
+        { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
     ];
 
     const headerRow = table.insertRow();
@@ -253,7 +283,7 @@ function displayCookieDetails(mainDomain, cookies) {
 
             // Add tooltip to show full content on hover
             cell.addEventListener('mouseenter', function() {
-                cell.title = cell.offsetWidth < cell.scrollWidth ? cell.textContent : '';
+                cell.title = cell.textContent;
             });
         });
 
@@ -288,12 +318,8 @@ function displayCookieDetails(mainDomain, cookies) {
 }
 
 
-// ==================== DELETION OF COOKIES ====================
 
-// Helper function to construct the cookie URL
-function getCookieUrl(cookie) {
-    return `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`;
-}
+// ==================== DELETION OF COOKIES ====================
 
 // Function to delete a cookie
 async function deleteCookie(cookie) {
@@ -306,6 +332,9 @@ async function deleteCookie(cookie) {
         storeId: storeId,
         partitionKey: cookie.partitionKey
     });
+
+    // Call updateDisplay to refresh the popup content after deletion
+    await updateDisplay();
 }
 
 // Function to delete cookies based on a filter function
@@ -319,7 +348,7 @@ async function deleteAllCookiesForDomain(domain) {
     const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
     tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
     await deleteCookies(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
-    showUndoIcon(); // Show undo icon after deletion
+    showUndoIcon();
 }
 
 // Function to delete cookies from closed tabs
@@ -327,7 +356,7 @@ async function deleteCookiesFromClosedTabs(closedTabsCookies) {
     await deleteCookies(cookie => closedTabsCookies.includes(cookie));
 }
 
-// Function to undo the very last cookie deletion 
+// Function to undo the very last cookie deletion
 async function undoLastDeletion() {
     if (tempDeletedCookies.length > 0) {
         await Promise.all(tempDeletedCookies.map(cookie => {
@@ -344,44 +373,70 @@ async function undoLastDeletion() {
             });
         }));
 
-        tempDeletedCookies = []; 
-        await fetchCookiesAndTabs(); 
-        displayCookies(true, true, true); 
-        
-        // Highlight the active tab domain after restoring cookies
+        tempDeletedCookies = [];
+        await fetchCookiesAndTabs();
+        displayCookies(true, true, true);
         highlightActiveTabDomain();
 
-        // Show the settings icon again and hide the revert icon
         const settingsIcon = document.getElementById('icon4');
         const undoIcon = document.getElementById('icon5');
-        settingsIcon.style.display = 'inline-flex'; // Show settings icon
-        undoIcon.style.display = 'none'; // Hide undo icon
+        settingsIcon.style.display = 'inline-flex';
+        undoIcon.style.display = 'none';
     }
 }
 
-// Function to handle the undo icon visibility and timeout
-function showUndoIcon() {
-    const settingsIcon = document.getElementById('icon4');
-    const undoIcon = document.getElementById('icon5');
-
-    // Swap icons
-    settingsIcon.style.display = 'none'; // Hide settings icon
-    undoIcon.style.display = 'inline-flex'; // Show undo icon
-    
-    clearTimeout(undoTimeout);
-    undoTimeout = setTimeout(() => {
-        settingsIcon.style.display = 'inline-flex'; // Show settings icon again
-        undoIcon.style.display = 'none'; // Hide undo icon
-        tempDeletedCookies = []; // Clear the temp storage after timeout
-    }, 20000); // 20000 milliseconds = 20 seconds
+// General function to remove browsing data based on options
+async function removeBrowsingData(options) {
+    await browser.browsingData.remove({ since: 0 }, options);
 }
+
+// The myCleaner function to delete browsing data based on settings
+async function myCleaner() {
+    const settings = await browser.storage.local.get([
+        'mycleanerCookies',
+        'mycleanerBrowsingHistory',
+        'mycleanerCache',
+        'mycleanerAutofill',
+        'mycleanerDownloadHistory',
+        'mycleanerService',
+        'mycleanerPlugin',
+        'mycleanerLocal',
+        'mycleanerIndexed',
+        'mycleanerPasswords'
+
+    ]);
+
+    const options = {
+        cookies: settings.mycleanerCookies,
+        history: settings.mycleanerBrowsingHistory,
+        cache: settings.mycleanerCache,
+        formData: settings.mycleanerAutofill,
+        downloads: settings.mycleanerDownloadHistory,
+        serviceWorkers: settings.mycleanerService,
+        pluginData: settings.mycleanerPlugin,
+        localStorage: settings.mycleanerLocal,
+        indexedDB: settings.mycleanerIndexed,
+        passwords: settings.mycleanerPasswords
+    };
+
+    const mycleaner = Object.entries(options)
+        .filter(([, value]) => value)
+        .reduce((acc, [key]) => {
+            acc[key] = true;
+            return acc;
+        }, {});
+
+    if (Object.keys(mycleaner).length > 0) {
+        await browser.browsingData.remove({ since: 0 }, mycleaner);
+    }
+}
+
 
 
 // ==================== EVENT LISTENERS ====================
 
-// Initialize the extension
 document.addEventListener('DOMContentLoaded', async function () {
-    await initExtension(); 
+    await initExtension();
 
     const cookiesContainer = document.getElementById("cookies-container");
     const icon1 = document.getElementById('icon1');
@@ -389,25 +444,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const icon3 = document.getElementById('icon3');
     const icon5 = document.getElementById('icon5');
 
-    // Helper function to update cookies and tabs display
-    async function updateDisplay() {
-        await fetchCookiesAndTabs();
-        displayCookies(true, true, true);
-        highlightActiveTabDomain();
-    }
-
-    // Function to remove browsing data based on options
-    async function removeBrowsingData(options) {
-        await browser.browsingData.remove({ since: 0 }, options);
-        await updateDisplay();
-    }
-
-    // Function to check if there are cookies to delete
-    function hasCookiesToDelete() {
-        return cookies.length > 0;
-    }
-
-    // Event listener for icon1 to delete cookies associated with closed tabs
+    // Event listener for the icon1 to delete cookies associated with closed tabs
     icon1.addEventListener('click', async () => {
         if (!hasCookiesToDelete()) return;
         const userConfirmed = await showConfirmationModal(cookies);
@@ -419,36 +456,27 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Event listener for icon2 to delete all cookies
+    // Event listener for the icon2 to delete all cookies
     icon2.addEventListener('click', async () => {
         if (!hasCookiesToDelete()) return;
         const userConfirmed = await showConfirmationModal(cookies);
         if (userConfirmed) {
             await removeBrowsingData({ cookies: true });
+            await updateDisplay();
         }
     });
 
-    // Event listener for icon3 to delete all browsing data
+    // Event listener for the icon3 to trigger the myCleaner function
     icon3.addEventListener('click', async () => {
         if (!hasCookiesToDelete()) return;
         const userConfirmed = await showConfirmationModal(cookies);
         if (userConfirmed) {
-            await removeBrowsingData({
-                cache: true,
-                cookies: true,
-                downloads: true,
-                formData: true,
-                history: true,
-                indexedDB: true,
-                localStorage: true,
-                passwords: true,
-                pluginData: true,
-                serviceWorkers: true,
-            });
+            await myCleaner();
+            await updateDisplay();
         }
     });
 
-    // Event listener for cookie container click: Deletes all cookies for the selected domain
+    // Event listener for the cookie container left-click: Deletes all cookies for the selected domain
     cookiesContainer.addEventListener('click', async (event) => {
         if (event.target.nodeName === 'DIV') {
             const website = event.target.textContent.split(' ')[0];
@@ -460,7 +488,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Event listener for context menu: Displays cookie details for the selected domain
+    // Event listener for the cookie container right-click: Displays cookie details for the selected domain
     cookiesContainer.addEventListener('contextmenu', async (event) => {
         if (event.target.nodeName === 'DIV') {
             const website = event.target.textContent.split(' ')[0];
@@ -469,23 +497,48 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Event listener for icon5 to undo the very last cookie deletion
+    // Event listener for the icon5 to undo the very last cookie deletion
     icon5.addEventListener('click', async () => {
         await undoLastDeletion();
-    });
-
-    cookiesContainer.addEventListener('click', async (event) => {
-        const target = event.target;
-        if (target && target.tagName === 'DIV') {
-            const domain = target.textContent.split(' ')[0];
-            await deleteAllCookiesForDomain(domain);
-            target.remove();
-        }
     });
 });
 
 
+
 // ==================== HELPER FUNCTIONS ====================
+
+// Function to handle the undo icon visibility and timeout
+function showUndoIcon() {
+    const settingsIcon = document.getElementById('icon4');
+    const undoIcon = document.getElementById('icon5');
+
+    settingsIcon.style.display = 'none';
+    undoIcon.style.display = 'inline-flex';
+
+    clearTimeout(undoTimeout);
+    undoTimeout = setTimeout(() => {
+        settingsIcon.style.display = 'inline-flex';
+        undoIcon.style.display = 'none';
+        tempDeletedCookies = [];
+    }, 20000);
+}
+
+// Function to construct the cookie URL
+function getCookieUrl(cookie) {
+    return `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`;
+}
+
+// Function to update cookies and tabs display
+async function updateDisplay() {
+    await fetchCookiesAndTabs(); 
+    displayCookies(true, true, true);
+    highlightActiveTabDomain();
+}
+
+// Function to check if there are any cookies to be deleted (to avoid the confirmation dialogue if no cookie is listed)
+function hasCookiesToDelete() {
+    return cookies.length > 0;
+}
 
 // Function to ask for confirmation before deletion
 function showConfirmationModal() {
@@ -523,123 +576,29 @@ const numLevels = -2;
 
 // Object to hold special second-level domains (SLDs) sorted by country
 const specialSLDs = {
-    Algeria: [
-        'com.dz', 'gov.dz', 'org.dz', 'edu.dz', 'asso.dz',
-        'pol.dz', 'art.dz', 'net.dz', 'tm.dz', 'soc.dz'
-    ],
-    Australia: [
-        'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au',
-        'asn.au', 'id.au', 'csiro.au'
-    ],
-    Austria: [
-        'ac.at', 'gv.at', 'co.at', 'or.at', 'priv.at'
-    ],
-    Bangladesh: [
-        'com.bd', 'net.bd', 'org.bd', 'edu.bd', 'ac.bd',
-        'info.bd', 'co.bd', 'gov.bd', 'mil.bd', 'tv.bd'
-    ],
-    Brazil: [
-        'app.br', 'art.br', 'com.br', 'dev.br', 'eco.br',
-        'emp.br', 'log.br', 'net.br', 'ong.br', 'seg.br',
-        'edu.br', 'blog.br', 'flog.br', 'nom.br', 'vlog.br',
-        'wiki.br', 'agr.br', 'esp.br', 'etc.br', 'far.br',
-        'imb.br', 'ind.br', 'inf.br', 'radio.br', 'rec.br',
-        'srv.br', 'tmp.br', 'tur.br', 'tv.br', 'am.br',
-        'coop.br', 'fm.br', 'g12.br', 'gov.br', 'mil.br',
-        'org.br', 'psi.br', 'b.br', 'def.br', 'jus.br',
-        'leg.br', 'mp.br', 'tc.br' 
-    ],
-
-    France: [
-        'avocat.fr', 'aeroport.fr', 'veterinaire.fr', 'gouv.fr' 
-    ],
-    Hungary: [
-        '2000.hu', 'agrar.hu', 'bolt.hu', 'city.hu', 'co.hu',
-        'edu.hu', 'film.hu', 'forum.hu', 'games.hu', 'gov.hu',
-        'hotel.hu', 'info.hu', 'ingatlan.hu', 'jogasz.hu',
-        'konyvelo.hu', 'lakas.hu', 'media.hu', 'mobi.hu',
-        'net.hu', 'news.hu', 'org.hu', 'priv.hu', 'reklam.hu',
-        'shop.hu', 'sport.hu', 'suli.hu', 'tm.hu', 'tozsde.hu',
-        'utazas.hu', 'video.hu', 'casino.hu', 'erotica.hu',
-        'erotika.hu', 'sex.hu', 'szex.hu'
-    ],
-    New_Zealand: [
-        'ac.nz', 'co.nz', 'geek.nz', 'gen.nz', 'kiwi.nz',
-        'maori.nz', 'net.nz', 'org.nz', 'school.nz', 'cri.nz',
-        'govt.nz', 'health.nz', 'iwi.nz', 'mil.nz', 'parliament.nz'
-    ],
-    Nigeria: [
-        'com.ng', 'org.ng', 'gov.ng', 'edu.ng', 'net.ng',
-        'sch.ng', 'name.ng', 'mobi.ng', 'mil.ng', 'i.ng'
-    ],
-    Pakistan: [
-        'com.pk', 'org.pk', 'net.pk', 'ac.pk', 'edu.pk',
-        'res.pk', 'gov.pk', 'mil.pk', 'gok.pk', 'gob.pk',
-        'gkp.pk', 'gop.pk', 'gos.pk', 'gog.pk', 'ltd.pk',
-        'web.pk', 'fam.pk', 'biz.pk'
-    ],
-    India: [
-        'co.in', 'com.in', 'firm.in', 'net.in', 'org.in',
-        'gen.in', 'ind.in', 'ernet.in', 'ac.in'
-    ],
-    Israel: [
-        'ac.il', 'co.il', 'org.il', 'net.il', 'k12.il',
-        'gov.il', 'muni.il', 'idf.il'
-    ],
-    Japan: [
-        'ac.jp', 'ad.jp', 'co.jp', 'ed.jp', 'go.jp',
-        'gr.jp', 'lg.jp', 'ne.jp', 'or.jp'
-    ],
-    Russia: [
-        'ac.ru', 'com.ru', 'edu.ru', 'gov.ru', 'int.ru', 'mil.ru', 'net.ru', 'org.ru', 'pp.ru',
-    ],
-    South_Africa: [
-        'ac.za', 'co.za', 'edu.za', 'gov.za', 'law.za',
-        'mil.za', 'net.za', 'nom.za', 'org.za', 'school.za'
-    ],
-    South_Korea: [
-        'co.kr', 'ne.kr', 'or.kr', 're.kr', 'pe.kr',
-        'go.kr', 'mil.kr', 'ac.kr', 'hs.kr', 'ms.kr',
-        'es.kr', 'sc.kr', 'kg.kr', 'seoul.kr', 'busan.kr',
-        'daegu.kr', 'incheon.kr', 'gwangju.kr', 'daejeon.kr',
-        'ulsan.kr', 'gyeonggi.kr', 'gangwon.kr', 'chungbuk.kr',
-        'chungnam.kr', 'jeonbuk.kr', 'jeonnam.kr', 'gyeongbuk.kr',
-        'gyeongnam.kr', 'jeju.kr'
-    ],
-    Spain: [
-        'com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es'
-    ],
-    Sri_Lanka: [
-        'gov.lk', 'ac.lk', 'sch.lk', 'net.lk', 'int.lk',
-        'com.lk', 'org.lk', 'edu.lk', 'ngo.lk', 'soc.lk',
-        'web.lk', 'ltd.lk', 'assn.lk', 'grp.lk', 'hotel.lk'
-    ],
-    Thailand: [
-        'ac.th', 'co.th', 'go.th', 'mi.th', 'or.th',
-        'net.th', 'in.th'
-    ],
-    Trinidad_and_Tobago: [
-        'co.tt', 'com.tt', 'org.tt', 'net.tt', 'travel.tt',
-        'museum.tt', 'aero.tt', 'tel.tt', 'name.tt',
-        'charity.tt', 'mil.tt', 'edu.tt', 'gov.tt'
-    ],
-    Türkiye: [
-        'gov.tr', 'mil.tr', 'tsk.tr', 'k12.tr', 'edu.tr',
-        'av.tr', 'dr.tr', 'bel.tr', 'pol.tr', 'kep.tr',
-        'com.tr', 'net.tr', 'org.tr', 'info.tr', 'bbs.tr',
-        'nom.tr', 'tv.tr', 'biz.tr', 'tel.tr', 'gen.tr',
-        'web.tr', 'name.tr'
-    ],
-    Ukraine: [
-        'com.ua', 'in.ua', 'org.ua', 'net.ua', 'edu.ua',
-        'gov.ua'
-    ],
-    United_Kingdom: [
-        'ac.uk', 'bl.uk', 'co.uk', 'gov.uk', 'judiciary.uk',
-        'ltd.uk', 'me.uk', 'mod.uk', 'net.uk', 'nhs.uk',
-        'nic.uk', 'org.uk', 'parliament.uk', 'plc.uk',
-        'police.uk', 'rct.uk', 'royal.uk', 'sch.uk', 'ukaea.uk'
-    ],
+    Algeria: ['com.dz', 'gov.dz', 'org.dz', 'edu.dz', 'asso.dz', 'pol.dz', 'art.dz', 'net.dz', 'tm.dz', 'soc.dz'],
+    Australia: ['com.au', 'net.au', 'org.au', 'edu.au', 'gov.au', 'asn.au', 'id.au', 'csiro.au'],
+    Austria: ['ac.at', 'gv.at', 'co.at', 'or.at', 'priv.at'],
+    Bangladesh: ['com.bd', 'net.bd', 'org.bd', 'edu.bd', 'ac.bd', 'info.bd', 'co.bd', 'gov.bd', 'mil.bd', 'tv.bd'],
+    Brazil: ['app.br', 'art.br', 'com.br', 'dev.br', 'eco.br', 'emp.br', 'log.br', 'net.br', 'ong.br', 'seg.br', 'edu.br', 'blog.br', 'flog.br', 'nom.br', 'vlog.br', 'wiki.br', 'agr.br', 'esp.br', 'etc.br', 'far.br', 'imb.br', 'ind.br', 'inf.br', 'radio.br', 'rec.br', 'srv.br', 'tmp.br', 'tur.br', 'tv.br', 'am.br', 'coop.br', 'fm.br', 'g12.br', 'gov.br', 'mil.br', 'org.br', 'psi.br', 'b.br', 'def.br', 'jus.br', 'leg.br', 'mp.br', 'tc.br'],
+    France: ['avocat.fr', 'aeroport.fr', 'veterinaire.fr', 'gouv.fr'],
+    Hungary: ['2000.hu', 'agrar.hu', 'bolt.hu', 'city.hu', 'co.hu', 'edu.hu', 'film.hu', 'forum.hu', 'games.hu', 'gov.hu', 'hotel.hu', 'info.hu', 'ingatlan.hu', 'jogasz.hu', 'konyvelo.hu', 'lakas.hu', 'media.hu', 'mobi.hu', 'net.hu', 'news.hu', 'org.hu', 'priv.hu', 'reklam.hu', 'shop.hu', 'sport.hu', 'suli.hu', 'tm.hu', 'tozsde.hu', 'utazas.hu', 'video.hu', 'casino.hu', 'erotica.hu', 'erotika.hu', 'sex.hu', 'szex.hu'],
+    New_Zealand: ['ac.nz', 'co.nz', 'geek.nz', 'gen.nz', 'kiwi.nz', 'maori.nz', 'net.nz', 'org.nz', 'school.nz', 'cri.nz', 'govt.nz', 'health.nz', 'iwi.nz', 'mil.nz', 'parliament.nz'],
+    Nigeria: ['com.ng', 'org.ng', 'gov.ng', 'edu.ng', 'net.ng', 'sch.ng', 'name.ng', 'mobi.ng', 'mil.ng', 'i.ng'],
+    Pakistan: ['com.pk', 'org.pk', 'net.pk', 'ac.pk', 'edu.pk', 'res.pk', 'gov.pk', 'mil.pk', 'gok.pk', 'gob.pk', 'gkp.pk', 'gop.pk', 'gos.pk', 'gog.pk', 'ltd.pk', 'web.pk', 'fam.pk', 'biz.pk'],
+    India: ['co.in', 'com.in', 'firm.in', 'net.in', 'org.in', 'gen.in', 'ind.in', 'ernet.in', 'ac.in'],
+    Israel: ['ac.il', 'co.il', 'org.il', 'net.il', 'k12.il', 'gov.il', 'muni.il', 'idf.il'],
+    Japan: ['ac.jp', 'ad.jp', 'co.jp', 'ed.jp', 'go.jp', 'gr.jp', 'lg.jp', 'ne.jp', 'or.jp'],
+    Russia: ['ac.ru', 'com.ru', 'edu.ru', 'gov.ru', 'int.ru', 'mil.ru', 'net.ru', 'org.ru', 'pp.ru'],
+    South_Africa: ['ac.za', 'co.za', 'edu.za', 'gov.za', 'law.za', 'mil.za', 'net.za', 'nom.za', 'org.za', 'school.za'],
+    South_Korea: ['co.kr', 'ne.kr', 'or.kr', 're.kr', 'pe.kr', 'go.kr', 'mil.kr', 'ac.kr', 'hs.kr', 'ms.kr', 'es.kr', 'sc.kr', 'kg.kr', 'seoul.kr', 'busan.kr', 'daegu.kr', 'incheon.kr', 'gwangju.kr', 'daejeon.kr', 'ulsan.kr', 'gyeonggi.kr', 'gangwon.kr', 'chungbuk.kr', 'chungnam.kr', 'jeonbuk.kr', 'jeonnam.kr', 'gyeongbuk.kr', 'gyeongnam.kr', 'jeju.kr'],
+    Spain: ['com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es'],
+    Sri_Lanka: ['gov.lk', 'ac.lk', 'sch.lk', 'net.lk', 'int.lk', 'com.lk', 'org.lk', 'edu.lk', 'ngo.lk', 'soc.lk', 'web.lk', 'ltd.lk', 'assn.lk', 'grp.lk', 'hotel.lk'],
+    Thailand: ['ac.th', 'co.th', 'go.th', 'mi.th', 'or.th', 'net.th', 'in.th'],
+    Trinidad_and_Tobago: ['co.tt', 'com.tt', 'org.tt', 'net.tt', 'travel.tt', 'museum.tt', 'aero.tt', 'tel.tt', 'name.tt', 'charity.tt', 'mil.tt', 'edu.tt', 'gov.tt'],
+    Türkiye: ['gov.tr', 'mil.tr', 'tsk.tr', 'k12.tr', 'edu.tr', 'av.tr', 'dr.tr', 'bel.tr', 'pol.tr', 'kep.tr', 'com.tr', 'net.tr', 'org.tr', 'info.tr', 'bbs.tr', 'nom.tr', 'tv.tr', 'biz.tr', 'tel.tr', 'gen.tr', 'web.tr', 'name.tr'],
+    Ukraine: ['com.ua', 'in.ua', 'org.ua', 'net.ua', 'edu.ua', 'gov.ua'],
+    United_Kingdom: ['ac.uk', 'bl.uk', 'co.uk', 'gov.uk', 'judiciary.uk', 'ltd.uk', 'me.uk', 'mod.uk', 'net.uk', 'nhs.uk', 'nic.uk', 'org.uk', 'parliament.uk', 'plc.uk', 'police.uk', 'rct.uk', 'royal.uk', 'sch.uk', 'ukaea.uk'],
     United_States: [
         // To add
     ]
@@ -648,18 +607,14 @@ const specialSLDs = {
 // Extracts the main domain from a full domain
 function getMainDomain(domain) {
     const parts = domain.split('.').filter(part => part && part !== 'www');
-    
-    // Check the last two parts of the domain
     const lastTwoParts = parts.slice(-2).join('.');
-    
-    // Loop through each country and its SLDs to check for exceptions
+
     for (const country in specialSLDs) {
         if (specialSLDs[country].includes(lastTwoParts)) {
-            return parts.slice(-3).join('.'); 
+            return parts.slice(-3).join('.');
         }
     }
 
-    // Default behavior for other domains
     return parts.slice(numLevels).join('.');
 }
 
@@ -667,11 +622,12 @@ function getMainDomain(domain) {
 function isDomainOrSubdomain(domain1, domain2) {
     const mainDomain1 = getMainDomain(domain1);
     const mainDomain2 = getMainDomain(domain2);
-    if (mainDomain1 === mainDomain2) return true; 
+    if (mainDomain1 === mainDomain2) return true;
+
     const parts1 = domain1.split('.').reverse();
     const parts2 = domain2.split('.').reverse();
     for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
-        if (parts1[i] !== parts2[i]) return false; 
+        if (parts1[i] !== parts2[i]) return false;
     }
     return true;
 }
@@ -688,7 +644,7 @@ function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
 function calculateCookieSize(cookie) {
     const nameLength = cookie.name.length;
     const valueLength = cookie.value.length;
-    return nameLength + valueLength; 
+    return nameLength + valueLength;
 }
 
 // Formats the expiration date of a cookie

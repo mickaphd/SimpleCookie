@@ -18,7 +18,17 @@ const defaultSettings = {
     enableActiveTabHighlight: true,
     enableSpecialJarIcon: true,
     enablePartitionIcon: true,
-    showIconsContainer: true
+    showDock: true,
+    mycleanerCookies: true,
+    mycleanerBrowsingHistory: true,
+    mycleanerCache: false,
+    mycleanerAutofill: false,
+    mycleanerDownloadHistory: true,
+    mycleanerService: false,
+    mycleanerPlugin: false,
+    mycleanerLocal: false,
+    mycleanerIndexed: false,
+    mycleanerPasswords: false
 };
 
 // Function to save settings to storage
@@ -35,20 +45,23 @@ async function loadSettings() {
 // Function to initialize settings
 async function initializeSettings() {
     const settings = await loadSettings();
-    const {
-        enableGhostIcon,
-        enableActiveTabHighlight,
-        enableSpecialJarIcon,
-        enablePartitionIcon,
-        showIconsContainer
-    } = settings;
-
+    
     // Set initial values for settings inputs
-    document.getElementById('enableGhostIcon').checked = enableGhostIcon;
-    document.getElementById('enableSpecialJarIcon').checked = enableSpecialJarIcon;
-    document.getElementById('enablePartitionIcon').checked = enablePartitionIcon;
-    document.getElementById('enableActiveTabHighlight').checked = enableActiveTabHighlight;
-    document.getElementById('showIconsContainer').checked = showIconsContainer;
+    document.getElementById('enableGhostIcon').checked = settings.enableGhostIcon;
+    document.getElementById('enableSpecialJarIcon').checked = settings.enableSpecialJarIcon;
+    document.getElementById('enablePartitionIcon').checked = settings.enablePartitionIcon;
+    document.getElementById('enableActiveTabHighlight').checked = settings.enableActiveTabHighlight;
+    document.getElementById('showDock').checked = settings.showDock;
+    document.getElementById('mycleanerCookies').checked = settings.mycleanerCookies;
+    document.getElementById('mycleanerBrowsingHistory').checked = settings.mycleanerBrowsingHistory;
+    document.getElementById('mycleanerCache').checked = settings.mycleanerCache;
+    document.getElementById('mycleanerAutofill').checked = settings.mycleanerAutofill;
+    document.getElementById('mycleanerDownloadHistory').checked = settings.mycleanerDownloadHistory;
+    document.getElementById('mycleanerService').checked = settings.mycleanerService;
+    document.getElementById('mycleanerPlugin').checked = settings.mycleanerPlugin;
+    document.getElementById('mycleanerLocal').checked = settings.mycleanerLocal;
+    document.getElementById('mycleanerIndexed').checked = settings.mycleanerIndexed;
+    document.getElementById('mycleanerPasswords').checked = settings.mycleanerPasswords;
 
     // Event listeners for settings changes
     document.getElementById('enableGhostIcon').addEventListener('change', async function() {
@@ -71,9 +84,59 @@ async function initializeSettings() {
         await saveSettings({ enableActiveTabHighlight: settings.enableActiveTabHighlight });
     });
 
-    document.getElementById('showIconsContainer').addEventListener('change', async function() {
-        settings.showIconsContainer = this.checked;
-        await saveSettings({ showIconsContainer: settings.showIconsContainer });
+    document.getElementById('showDock').addEventListener('change', async function() {
+        settings.showDock = this.checked;
+        await saveSettings({ showDock: settings.showDock });
+    });
+
+    document.getElementById('mycleanerCookies').addEventListener('change', async function() {
+        settings.mycleanerCookies = this.checked;
+        await saveSettings({ mycleanerCookies: settings.mycleanerCookies });
+    });
+
+    document.getElementById('mycleanerBrowsingHistory').addEventListener('change', async function() {
+        settings.mycleanerBrowsingHistory = this.checked;
+        await saveSettings({ mycleanerBrowsingHistory: settings.mycleanerBrowsingHistory });
+    });
+
+    document.getElementById('mycleanerCache').addEventListener('change', async function() {
+        settings.mycleanerCache = this.checked;
+        await saveSettings({ mycleanerCache: settings.mycleanerCache });
+    });
+
+    document.getElementById('mycleanerAutofill').addEventListener('change', async function() {
+        settings.mycleanerAutofill = this.checked;
+        await saveSettings({ mycleanerAutofill: settings.mycleanerAutofill });
+    });
+
+    document.getElementById('mycleanerDownloadHistory').addEventListener('change', async function() {
+        settings.mycleanerDownloadHistory = this.checked;
+        await saveSettings({ mycleanerDownloadHistory: settings.mycleanerDownloadHistory });
+    });
+
+    document.getElementById('mycleanerService').addEventListener('change', async function() {
+        settings.mycleanerService = this.checked;
+        await saveSettings({ mycleanerService: settings.mycleanerService });
+    });
+
+    document.getElementById('mycleanerPlugin').addEventListener('change', async function() {
+        settings.mycleanerPlugin = this.checked;
+        await saveSettings({ mycleanerPlugin: settings.mycleanerPlugin });
+    });
+
+    document.getElementById('mycleanerLocal').addEventListener('change', async function() {
+        settings.mycleanerLocal = this.checked;
+        await saveSettings({ mycleanerLocal: settings.mycleanerLocal });
+    });
+
+    document.getElementById('mycleanerIndexed').addEventListener('change', async function() {
+        settings.mycleanerIndexed = this.checked;
+        await saveSettings({ mycleanerIndexed: settings.mycleanerIndexed });
+    });
+
+    document.getElementById('mycleanerPasswords').addEventListener('change', async function() {
+        settings.mycleanerPasswords = this.checked;
+        await saveSettings({ mycleanerPasswords: settings.mycleanerPasswords });
     });
 }
 
@@ -83,7 +146,7 @@ document.getElementById('tipIcon').addEventListener('click', function() {
     document.getElementById('overlay').style.display = 'block';
 });
 
-// Close the tip qrcode when clicking outside of it
+// Close the tip QR code when clicking outside of it
 document.getElementById('overlay').addEventListener('click', function() {
     document.getElementById('imagePopup').style.display = 'none';
     document.getElementById('overlay').style.display = 'none';
