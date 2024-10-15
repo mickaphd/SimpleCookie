@@ -25,8 +25,8 @@
 
 <h2>Settings</h2>
 
-<img width="480" alt="Settings_light" src="https://github.com/user-attachments/assets/0e45afc3-bde7-4662-8ae3-e347b4f74155">
-<img width="350" alt="Settings_dark_extensions-menu" src="https://github.com/user-attachments/assets/5d0716d3-9b38-4402-9df9-5742d1332295">
+<img width="400" alt="Settings_light" src="https://github.com/user-attachments/assets/0e45afc3-bde7-4662-8ae3-e347b4f74155">
+<img width="300" alt="Settings_dark_extensions-menu" src="https://github.com/user-attachments/assets/5d0716d3-9b38-4402-9df9-5742d1332295">
 
 <h2>Key features</h2>
 
