@@ -15,6 +15,7 @@
 <img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/67156dc7-fd0a-4129-a69d-75045940cd02">
 <img width="200" alt="Popup_light_undo" src="https://github.com/user-attachments/assets/41cc8fe8-f4b2-4760-ae54-cbccb4120280">
 <img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/88a2815d-e12a-41e4-99b0-b32e11bab356">
+<img width="200" alt="Popup_minimalist_light" src="https://github.com/user-attachments/assets/bbd361c5-6517-4a05-adfa-97c85fd86235">
 <img width="200" alt="Popup_light_confirm" src="https://github.com/user-attachments/assets/ff3590b5-0278-4d14-8fe5-c28939c31b1d">
 
 <h2>Detailed table</h2>
@@ -24,7 +25,7 @@
 
 <h2>Settings</h2>
 
-<img width="350" alt="Settings_light" src="https://github.com/user-attachments/assets/e3c8284e-7bd8-437f-83cd-e06137e294eb">
+<img width="350" alt="Settings_light" src="https://github.com/user-attachments/assets/0e45afc3-bde7-4662-8ae3-e347b4f74155">
 <img width="350" alt="Settings_dark_extensions-menu" src="https://github.com/user-attachments/assets/5d0716d3-9b38-4402-9df9-5742d1332295">
 
 <h2>Key features</h2>
