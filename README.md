@@ -41,7 +41,7 @@
 
 1. <b>Safety first:</b> A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered after clicking a website. A confirmation prompt also appears for the Dock shortcuts. Many footnotes have been added for educational purposes (icons, table headers, settings).
 
-1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green). The 'trash can' icon deletes all cookies without exception. The 'hand sparkles' icon activates the My Cleaner feature, allowing you to delete your selected browsing data. The 'gear' icon opens the settings.
+1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green). The 'trash can' icon deletes all cookies without exception. The 'hand sparkles' icon triggers the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
 
 1. <b>Tracker database:</b> SimpleCookie uses an internal tracking database derived from Ghostery (https://github.com/ghostery/trackerdb) to identify organizations/websites known to track behavior (ghost icon). While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy.
 
