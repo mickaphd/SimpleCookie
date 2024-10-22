@@ -12,21 +12,24 @@
 
 <h2>Main popup</h2>
 
-<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/67156dc7-fd0a-4129-a69d-75045940cd02">
-<img width="200" alt="Popup_light_undo" src="https://github.com/user-attachments/assets/41cc8fe8-f4b2-4760-ae54-cbccb4120280">
-<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/88a2815d-e12a-41e4-99b0-b32e11bab356">
-<img width="188" alt="Popup_minimalist_light" src="https://github.com/user-attachments/assets/bbd361c5-6517-4a05-adfa-97c85fd86235">
-<img width="200" alt="Popup_light_confirm" src="https://github.com/user-attachments/assets/ff3590b5-0278-4d14-8fe5-c28939c31b1d">
+<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/5fdea558-3172-4800-9fb0-9ce1bf38c4c1">
+<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/99b7d302-fc4b-43bf-9ed4-637ecca63313">
+<img width="200" alt="Popup_light_delete" src="https://github.com/user-attachments/assets/20e7a2d9-6bff-4374-9e0d-76fae884246f">
+<img width="200" alt="Popup_light_undo" src="https://github.com/user-attachments/assets/2f702ae0-1ff7-4730-b42b-22293fdde6a9">
+<img width="200" alt="Popup_light_confirm" src="https://github.com/user-attachments/assets/42076672-5c47-4537-a575-dd27d5688401">
+
 
 <h2>Detailed table</h2>
 
-<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/d5a104a4-bc59-4d83-ab81-a22c3ce7469e">
-<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/d10b93c9-a970-49b2-912c-57356aaa08c9">
+<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/e944e776-4f76-469d-963c-67b71c627c02">
+<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/c2b52b81-452f-4d67-aa77-5dfe49561874">
+
 
 <h2>Settings</h2>
 
-<img width="400" alt="Settings_light" src="https://github.com/user-attachments/assets/0e45afc3-bde7-4662-8ae3-e347b4f74155">
-<img width="300" alt="Settings_dark_extensions-menu" src="https://github.com/user-attachments/assets/5d0716d3-9b38-4402-9df9-5742d1332295">
+<img width="350" alt="Settings_light_extensions-menu" src="https://github.com/user-attachments/assets/dc3bd32a-be55-4f9c-9e0a-f7260747c3bb">
+<img width="350" alt="Settings_dark" src="https://github.com/user-attachments/assets/2314965e-5844-41a2-804e-974f3aee4a26">
+
 
 <h2>Key features</h2>
 
@@ -40,9 +43,9 @@
 
 1. <b>Effortless cookie removal:</b> A single click on a website deletes all cookies associated with that domain. Clicking on a specific cookie line in the detailed table removes only that individual cookie.
 
-1. <b>Safety first:</b> A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered after clicking a website. A confirmation prompt also appears for the Dock shortcuts. Many footnotes have been added for educational purposes (icons, table headers, settings).
+1. <b>Safety first:</b> A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered after clicking a website. A confirmation prompt also appears for the Dock shortcuts. Many footnotes have been added for educational purposes (icons, table headers, settings).
 
-1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green). The 'trash can' icon deletes all cookies without exception. The 'hand sparkles' icon triggers the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
+1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green) and your favorites. The 'trash can' icon deletes all cookies stored in Firefox except your favorites. The 'hand sparkles' icon launches the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
 
 1. <b>Tracker database:</b> SimpleCookie uses an internal tracking database derived from Ghostery (https://github.com/ghostery/trackerdb) to identify organizations/websites known to track behavior (ghost icon). While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy.
 
