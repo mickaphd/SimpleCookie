@@ -1,22 +1,23 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by micka */
+/* Made with ❤ by Micka from Paris */
 
-/* Default style */
+
+/* Pop-up style */
 * {
-    margin: 0;
-    padding: 0;
+    margin: 0px;
+    padding: 0px;
     box-sizing: border-box;
 }
 
-/* Body styles */
+/* Body style */
 body {
-    padding-top: 0;
+    padding-top: 0px;
+    padding-bottom: 0px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13.5px;
     background-color: var(--background-color);
     display: flex;
     flex-direction: column;
-    align-items: center;
 }
 
 /* Light and dark theme settings */
@@ -38,7 +39,7 @@ body {
 
 /* Cookie container style */
 #cookies-container {
-    margin: 0;
+    margin: 0px;
     max-height: 500px;
     max-width: 100%;
     overflow-y: auto;
@@ -48,8 +49,8 @@ body {
 /* Cookie list style */
 #cookies-container div {
     text-align: left;
-    margin: 0;
-    padding: 2.2px 5px;
+    margin: 0px;
+    padding: 2.5px 5px;
     color: var(--text-color);
     white-space: nowrap;
 }
@@ -59,7 +60,14 @@ body {
     cursor: pointer;
 }
 
-/* Icon colors based on theme */
+/* Favorite icon style */
+.star-icon {
+    font-size: 12px;
+    margin-right: 5px;
+    margin-left: 0px;
+}
+
+/* Dock icon colors based on theme */
 @media (prefers-color-scheme: light) {
     #icon1, #icon2, #icon3, #icon4 {
         color: var(--icon-color-light);
@@ -72,7 +80,7 @@ body {
     }
 }
 
-/* Appearance icon style */
+/* Insights icon style */
 .ghost-icon,
 .container-icon,
 .partition-icon {
@@ -81,9 +89,9 @@ body {
 }
 
 .active-tab-icon {
-    font-size: 10px;
-    opacity: 0.8;
-    color: #FE0179;
+    font-size: 12px;
+    opacity: 1;
+    color: #F7CA18;
 }
 
 /* Dock style */
@@ -92,12 +100,12 @@ body {
     justify-content: center;
     align-items: center;
     text-align: center;
-    margin: 4px 0;
+    margin: 5px 0px;
     width: 100%; 
 }
 
 #dock i {
-    margin: 0 6px;
+    margin: 0px 7px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -105,21 +113,24 @@ body {
 
 /* Default opacity for icons 1, 2, 3 and 4 */
 #icon1, #icon2, #icon3, #icon4 {
-    opacity: 0.2;
+    opacity: 0.1;
 }
 
 /* Hover effects for icons 1, 2 and 3 */
 #icon1:hover,
 #icon2:hover,
-#icon3:hover {
+#icon3:hover,
+#icon5:hover {
     opacity: 1;
     color: #FE0179;
+    transform: scale(1.3);
 }
 
 /* Icon 4 special hover effect */
 #icon4:hover {
     opacity: 1;
     color: black;
+    transform: scale(1.3);
 }
 
 /* Dark mode hover color for icon 4 */
@@ -175,7 +186,7 @@ body {
     }
 }
 
-/* Confirmation dialogue box style */
+/* Confirmation dialog box style */
 .modal {
     display: none;
     position: fixed;
@@ -191,7 +202,6 @@ body {
     background-color: none;
     margin: auto;
     padding: 20px;
-    border: none;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -199,7 +209,7 @@ body {
     height: 100%;
 }
 
-/* Yes and No confirmation button style */
+/* Confirmation button style */
 .icon-button {
     background: none;
     border: none;

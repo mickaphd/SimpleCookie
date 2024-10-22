@@ -40,6 +40,8 @@
 5min.com
 600z.com
 6gpwkrxh.micpn.com
+6sc.co
+6sense.com
 71i.de
 777seo.com
 77tracking.com
@@ -365,6 +367,7 @@ adnxs.net
 adnxs-simple.com
 adnymics.com
 adobe.com
+adobedc.net
 adobedtm.com
 adobelogin.com
 adoberesources.net
@@ -926,6 +929,7 @@ atendesoftware.pl
 atgsvcs.com
 aticdn.net
 ati-host.net
+atlas.microsoft.com
 atlassbx.com
 atlassian.com
 atlassian.net
@@ -1776,7 +1780,6 @@ d1d8vn0fpluuz7.cloudfront.net
 d1ivexoxmp59q7.cloudfront.net
 d1l6p2sc9645hc.cloudfront.net
 d1l7z5ofrj6ab8.cloudfront.net
-d1lm7kd3bd3yo9.cloudfront.net
 d1lp05q4sghme9.cloudfront.net
 d1mj578wat5n4o.cloudfront.net
 d1n00d49gkbray.cloudfront.net
@@ -2475,7 +2478,6 @@ green.erne.co
 green-red.com
 greenstory.ca
 greentube.com
-grepdata.com
 greystripe.com
 grmtech.net
 groovehq.com
@@ -3637,7 +3639,6 @@ pinimg.com
 pinterest.com
 pipedream.wistia.com
 pippio.com
-piwik.bayreuth.de
 piwik.org
 piwik.pro
 pixazza.com
@@ -3856,6 +3857,7 @@ quintrics.nl
 quisma.com
 quora.com
 qwobl.net
+r.bing.com
 r.i.ua
 r.msn.com
 r1-cdn.net
@@ -4299,6 +4301,7 @@ sitegainer.com
 siteheart.com
 siteimprove.com
 siteimproveanalytics.com
+siteimproveanalytics.io
 sitelabweb.com
 sitemeter.com
 site-research.net
@@ -4680,7 +4683,6 @@ t.channeladvisor.com
 t.co
 t.contentsquare.net
 t.mookie1.com
-t.myvisitors.se
 t.myvisualiq.net
 t.nativendo.de
 t.onthe.io
@@ -4934,6 +4936,7 @@ trendemon.com
 trgt.eu
 tribalfusion.com
 tribl.io
+triggerbee.com
 triggeredmail.appspot.com
 triggit.com
 tripadvisor.co.uk
@@ -5359,6 +5362,7 @@ wurfl.io
 wwa.wipe.de
 www.apture.com
 www.automizely-analytics.com
+www.bing.com
 www.blogcatalog.com
 www.domodomain.com
 www.googleadservices.com

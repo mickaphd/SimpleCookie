@@ -1,5 +1,6 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by micka */
+/* Made with ❤ by Micka from Paris */
+
 
 // Detect if dark mode is enabled
 const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -18,8 +19,7 @@ const defaultSettings = {
     enableActiveTabHighlight: true,
     enableSpecialJarIcon: true,
     enablePartitionIcon: true,
-    showDock: true,
-    mycleanerCookies: true,
+    mycleanerCookies: false,
     mycleanerBrowsingHistory: true,
     mycleanerCache: false,
     mycleanerAutofill: false,
@@ -51,7 +51,6 @@ async function initializeSettings() {
     document.getElementById('enableSpecialJarIcon').checked = settings.enableSpecialJarIcon;
     document.getElementById('enablePartitionIcon').checked = settings.enablePartitionIcon;
     document.getElementById('enableActiveTabHighlight').checked = settings.enableActiveTabHighlight;
-    document.getElementById('showDock').checked = settings.showDock;
     document.getElementById('mycleanerCookies').checked = settings.mycleanerCookies;
     document.getElementById('mycleanerBrowsingHistory').checked = settings.mycleanerBrowsingHistory;
     document.getElementById('mycleanerCache').checked = settings.mycleanerCache;
@@ -82,11 +81,6 @@ async function initializeSettings() {
     document.getElementById('enableActiveTabHighlight').addEventListener('change', async function() {
         settings.enableActiveTabHighlight = this.checked;
         await saveSettings({ enableActiveTabHighlight: settings.enableActiveTabHighlight });
-    });
-
-    document.getElementById('showDock').addEventListener('change', async function() {
-        settings.showDock = this.checked;
-        await saveSettings({ showDock: settings.showDock });
     });
 
     document.getElementById('mycleanerCookies').addEventListener('change', async function() {

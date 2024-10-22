@@ -1,5 +1,5 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
-<!-- Made with ❤ by micka -->
+<!-- Made with ❤ by Micka from Paris -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,11 +9,10 @@
     <title>SimpleCookie</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
+
         /* Base style */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            color: #333;
-            padding: 20px;
         }
 
         .settings-container {
@@ -25,7 +24,7 @@
         h3 {
             font-weight: bold;
             font-size: 18px;
-            margin: 20px 0 10px;
+            margin: 20px 0px 5px;
         }
 
         h3 i {
@@ -40,7 +39,7 @@
         }
 
         .settings-section i {
-            margin-right: 21px; /* for the icons in the Links section */
+            margin-right: 21px;
         }
 
         .settings-section label {
@@ -133,18 +132,19 @@
         .section-spacing {
             margin-bottom: 40px;
         }
+
     </style>
 </head>
 <body>
 <div class="settings-container">
 
-    <!-- Appearance Settings -->
+    <!-- Insights -->
     <div class="section-spacing">
-        <h3 title="Customize SimpleCookie pop-up by showing or hiding specific aspects of websites and their associated cookies.">Appearance <i class="fas fa-eye"></i></h3>
+        <h3 title="Customize the details displayed in SimpleCookie by showing or hiding specific aspects of websites and their associated cookies.">Insights <i class="fas fa-magnifying-glass"></i></h3>
         <hr>
         <div class="settings-section">
-            <div title="Display an indicator next to the website corresponding to the active tab when you call SimpleCookie, allowing you to easily locate and delete the cookies for the current website." style="display: flex; align-items: center;">
-                <i class="fas fa-play" style="margin-right: 24px;"></i>
+            <div title="Display an eye indicator next to the website corresponding to the active tab when you run SimpleCookie so you can easily locate, view and delete the cookies for the current website." style="display: flex; align-items: center;">
+                <i class="fas fa-eye" style="margin-right: 18px;"></i>
                 <span>Highlight the active tab</span>
             </div>
             <label>
@@ -173,7 +173,7 @@
         </div>
 
         <div class="settings-section">
-            <div title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information with many unrelated top-level sites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
+            <div title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information with many unrelated websites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
                 <i class="fas fa-code-branch" style="margin-right: 22px;"></i>
                 <span>Highlight websites with partitioned cookies</span>
             </div>
@@ -182,25 +182,16 @@
             </label>
         </div>
 
-        <div class="settings-section">
-            <div title="Show the Dock, which is the bottom ribbon with several action/shortcut icons. Disabling the Dock will prevent you from undoing a deletion if you accidentally click on a website in SimpleCookie main pop-up. Also, if you disable it and want to return to the settings, navigate to the Firefox Add-ons menu > SimpleCookie > Preferences/Options." style="display: flex; align-items: center;">
-                <i class="fas fa-broom" style="margin-right: 18px;"></i>
-                <span>Show the Dock (recommended!)</span>
-            </div>
-            <label>
-                <input type="checkbox" id="showDock" aria-label="Show action icons">
-            </label>
-        </div>
     </div>
 
-    <!-- myCleaner Settings -->
+    <!-- myCleaner -->
     <div class="section-spacing">
-        <h3 title="myCleaner is your personalized cleaner shortcut to delete what you want (all cookies, browsing and download history are enabled by default). Feel free to select or deselect any of the options below.">myCleaner <i class="fas fa-hand-sparkles"></i></h3>
+        <h3 title="myCleaner is your personalized cleaner shortcut to delete what you want (browsing and download history are enabled by default). Feel free to select or deselect any of the options below.">myCleaner <i class="fas fa-hand-sparkles"></i></h3>
         <hr>
         <div class="settings-section">
-            <div title="Small files stored by websites to remember things like user preferences and login information." style="display: flex; align-items: center;">
+            <div title="Small files stored by websites to remember things like user preferences and login information. Checking this box will cause all cookies to be deleted, regardless of their favorites status. If you want to delete everything but your favorite cookies, leave this checkbox unchecked and use the Trash can icon in the Dock, which does not override the Favorites status." style="display: flex; align-items: center;">
                 <i class="fas fa-cookie-bite" style="margin-right: 20px;"></i>
-                <span>Cookies</span>
+                <span>Cookies (⚠️)</span>
             </div>
             <label>
                 <input type="checkbox" id="mycleanerCookies" aria-label="Clean cookies">
@@ -290,7 +281,7 @@
         <div class="settings-section">
             <div title="Usernames and passwords that you have saved in the Firefox password manager. You should be very careful here..." style="display: flex; align-items: center;">
                 <i class="fas fa-key" style="margin-right: 20px;"></i>
-                <span>Saved passwords (not recommended at all...)</span>
+                <span>Saved passwords (⛔)</span>
             </div>
             <label>
                 <input type="checkbox" id="mycleanerPasswords" aria-label="Clean saved passwords">
@@ -299,7 +290,7 @@
 
     </div>
 
-    <!-- Links Section -->
+    <!-- Links -->
     <div class="section-spacing">
         <h3 title="Useful links (especially the last one!)">Links <i class="fas fa-link"></i></h3>
         <hr>
@@ -321,13 +312,13 @@
         </div>
     </div>
 
-    <!-- Dynamic tip popup -->
+    <!-- Tip popup -->
     <div id="imagePopup">
         <p style="margin-top: 2px; font-size: 12px; color: #333;">
-            <b><i>Thank you for your support</i> ;-)</b>
+            <b><i>Thank you for your support</i> ❤️</b>
         </p>
         <img src="resources/lightning_bolt12.jpeg" style="max-width: 220px; height: auto;">
-        <p style="margin-top: 2px; font-size: 12px; color: #333;">₿azuresync08@phoenixwallet.me</p>
+        <p style="margin-top: 2px; font-size: 12px; color: #333;">azuresync08@phoenixwallet.me</p>
     </div>
     <div id="overlay"></div>
 

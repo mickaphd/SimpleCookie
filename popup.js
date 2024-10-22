@@ -1,5 +1,5 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by micka */
+/* Made with ❤ by Micka from Paris */
 
 
 // ==================== INITIALIZATION OF VARIABLES ====================
@@ -18,6 +18,9 @@ let tempDeletedCookies = [];
 
 // Variable to manage the timeout for the undo action
 let undoTimeout; 
+
+// Load favorites
+const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 
 
 
@@ -38,22 +41,28 @@ async function fetchCookiesFromStore(storeId) {
     return [...normalCookies, ...partitionedCookies];
 }
 
-// Fetches all cookies from all containers
+// Fetches all cookies from all containers and avoid duplicates
 async function fetchAllCookies() {
     const containers = await browser.contextualIdentities.query({});
     const cookiePromises = containers.map(container => fetchCookiesFromStore(container.cookieStoreId));
-    cookiePromises.push(fetchCookiesFromStore(""));
+    cookiePromises.push(fetchCookiesFromStore("")); // Fetch cookies from the default store
 
     const allCookies = (await Promise.all(cookiePromises)).flat();
     const uniqueCookiesMap = new Map();
+    
     allCookies.forEach(cookie => {
-        const { name, value, size, domain, partitionKey, expirationDate, secure, httpOnly, sameSite } = cookie;
-        const key = `${name}|${value}|${size}|${domain}|${partitionKey}|${expirationDate}|${secure}|${httpOnly}|${sameSite}`;
+        const { name, value, size, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite } = cookie;
+        
+        // Create a unique key
+        const key = `${name}|${value}|${size}|${domain}|${partitionKey}|${storeId}|${expirationDate}|${secure}|${httpOnly}|${sameSite}`;
+        
+        // Store the cookie in the map if the key is not already present
         if (!uniqueCookiesMap.has(key)) {
             uniqueCookiesMap.set(key, cookie);
         }
     });
 
+    // Return the unique cookies as an array
     return Array.from(uniqueCookiesMap.values());
 }
 
@@ -79,8 +88,7 @@ async function applySettings() {
         enableSpecialJarIcon: true,
         enablePartitionIcon: true,
         enableActiveTabHighlight: true,
-        showDock: true,
-        mycleanerCookies: true,
+        mycleanerCookies: false,
         mycleanerBrowsingHistory: true,
         mycleanerCache: false,
         mycleanerAutofill: false,
@@ -98,7 +106,7 @@ async function applySettings() {
     const settings = { ...defaultSettings, ...storedSettings };
     await browser.storage.local.set(settings);
 
-    const { enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableActiveTabHighlight, showDock, 
+    const { enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableActiveTabHighlight, 
             mycleanerCookies, mycleanerBrowsingHistory, mycleanerCache, mycleanerAutofill, 
             mycleanerDownloadHistory, mycleanerService, mycleanerPlugin, 
             mycleanerLocal, mycleanerIndexed, mycleanerPasswords } = settings;
@@ -109,8 +117,6 @@ async function applySettings() {
     // Highlight the active tab domain if enabled
     if (enableActiveTabHighlight) highlightActiveTabDomain();
 
-    // Show or hide the Dock based on settings
-    document.getElementById('dock').style.display = showDock ? 'block' : 'none';
 }
 
 // Initializes the extension by fetching data and applying settings
@@ -126,20 +132,21 @@ document.addEventListener('DOMContentLoaded', initExtension);
 
 // ==================== DISPLAYING THE DATA ====================
 
-// Displays the websites and cookies based on user settings
+// Check Firefox theme 
+function getCurrentTheme() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+// Main function to display cookies, favorites and insights icons
 function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
     const openTabDomains = tabs.map(({ url }) => {
         const hostname = new URL(url).hostname;
-        return {
-            hostname,
-            mainDomain: getMainDomain(hostname)
-        };
+        return { hostname, mainDomain: getMainDomain(hostname) };
     });
 
     const container = document.getElementById('cookies-container');
-    container.innerHTML = '';
+    container.innerHTML = ''; // Clear the container
 
-    // Count cookies by main domain
     const websiteCounts = cookies.reduce((acc, { domain }) => {
         const mainDomain = getMainDomain(domain);
         acc[mainDomain] = (acc[mainDomain] || 0) + 1;
@@ -147,22 +154,76 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
     }, {});
 
     const fragment = document.createDocumentFragment();
-    const nonDefaultContainerDomains = new Set(cookies.filter(cookie => cookie.storeId !== 'firefox-default').map(cookie => getMainDomain(cookie.domain)));
-    const partitionedDomains = new Set(cookies.filter(cookie => cookie.partitionKey).map(cookie => getMainDomain(cookie.domain)));
+
+    const nonDefaultContainerDomains = new Set(
+        cookies.filter(cookie => cookie.storeId !== 'firefox-default')
+               .map(cookie => getMainDomain(cookie.domain))
+    );
+
+    const partitionedDomains = new Set(
+        cookies.filter(cookie => cookie.partitionKey)
+               .map(cookie => getMainDomain(cookie.domain))
+    );
 
     const elements = Object.entries(websiteCounts)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([website, count]) => {
             const element = document.createElement('div');
+
+            const star = document.createElement('i');
+            star.className = 'fas fa-star star-icon';
+            star.style.cursor = 'pointer';
+
+            // Set star state based on favorites
+            if (favorites.includes(website)) {
+                star.style.color = '#F7CA18';
+                star.style.opacity = '1';
+            } else {
+                // Set star color based on the current theme
+                if (getCurrentTheme() === 'dark') {
+                    star.style.color = 'white';
+                } else {
+                    star.style.color = 'black';
+                }
+                star.style.opacity = '0.1';
+            }
+
+            // Toggle star color and opacity on click
+            star.addEventListener('click', () => {
+                if (star.style.opacity === '0.1') {
+                    star.style.color = '#F7CA18';
+                    star.style.opacity = '1';
+                    favorites.push(website);
+                } else {
+                    // Set star color based on the current theme when not favorited
+                    if (getCurrentTheme() === 'dark') {
+                        star.style.color = 'white';
+                    } else {
+                        star.style.color = 'black';
+                    }
+                    star.style.opacity = '0.1';
+                    const index = favorites.indexOf(website);
+                    if (index !== -1) favorites.splice(index, 1);
+                }
+                // Save favorites to localStorage
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+            });
+
             element.textContent = `${website} (${count})`;
+            element.prepend(star);
 
-            // Display icons based on user settings
-            if (enableGhostIcon) updateIcon(element, website, 'fas fa-ghost ghost-icon', trackingSites.has(website));
-            if (enableSpecialJarIcon) updateIcon(element, website, 'fas fa-road-barrier container-icon', nonDefaultContainerDomains.has(getMainDomain(website)));
-            if (enablePartitionIcon) updateIcon(element, website, 'fas fa-code-branch partition-icon', partitionedDomains.has(getMainDomain(website)));
+            if (enableGhostIcon) 
+                updateIcon(element, website, 'fas fa-ghost ghost-icon', trackingSites.has(website));
+                
+            if (enableSpecialJarIcon) 
+                updateIcon(element, website, 'fas fa-road-barrier container-icon', nonDefaultContainerDomains.has(getMainDomain(website)));
+                
+            if (enablePartitionIcon) 
+                updateIcon(element, website, 'fas fa-code-branch partition-icon', partitionedDomains.has(getMainDomain(website)));
 
-            // Highlight active tab domain if applicable
-            const isActiveTab = openTabDomains.some(({ mainDomain }) => isDomainOrSubdomain(mainDomain, getMainDomain(website)));
+            const isActiveTab = openTabDomains.some(({ mainDomain }) => 
+                isDomainOrSubdomain(mainDomain, getMainDomain(website))
+            );
             if (isActiveTab) element.style.color = '#04A65D';
 
             return element;
@@ -201,12 +262,12 @@ function highlightActiveTabDomain() {
         return getMainDomain(domainText) === activeDomain;
     });
 
-    // Insert the active tab icon
+    // Insert the active tab icon at the end of the activeElement
     if (activeElement) {
         const icon = document.createElement('i');
-        icon.classList.add('fas', 'fa-play', activeIconClass);
-        icon.style.marginRight = '3px';
-        activeElement.insertBefore(icon, activeElement.firstChild);
+        icon.classList.add('fas', 'fa-eye', activeIconClass);
+        icon.style.marginLeft = '5px';
+        activeElement.appendChild(icon);
     }
 }
 
@@ -232,7 +293,8 @@ function displayCookieDetails(mainDomain, cookies) {
         { title: 'Size', description: 'The size of the cookie in bytes using a function that encodes both the cookie name and value, where each character is assumed to be one byte.' },
         { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
         { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS). Without cookie partitioning, third-party cookies can track users across the web. CHIPS, on the other hand, are restricted to the specific site on which they are set, preventing cross-site tracking while still allowing useful functions such as maintaining state across a domain and its subdomains.' },
-        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
+        { title: 'Container', description: 'The container in which the cookie is stored. Containers (also known as stores or jars) are used to separate cookies and other site data for different contexts or identities, allowing users to manage their online activities and privacy by keeping data from different sites separate. With Firefox Total Cookie Protection now enabled by default, most of your cookies are automatically restricted to the sites that created them, whether you use a specific container or not.' },
+	{ title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
         { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
         { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
         { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
@@ -242,7 +304,7 @@ function displayCookieDetails(mainDomain, cookies) {
     headers.forEach(({ title, description }) => {
         const headerCell = document.createElement('th');
         headerCell.textContent = title;
-        headerCell.title = description; // Tooltip for header
+        headerCell.title = description;
         headerCell.className = 'header-cell';
         headerRow.appendChild(headerCell);
     });
@@ -256,10 +318,17 @@ function displayCookieDetails(mainDomain, cookies) {
     // Function to add a row for each cookie in the table
     const addRow = (cookie) => {
         const row = table.insertRow();
-        const { name, value, domain, partitionKey, expirationDate, secure, httpOnly, sameSite } = cookie;
+        const { name, value, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite } = cookie;
         const cookieSize = calculateCookieSize(cookie);
+	const formattedStoreId = storeId.replace(/^firefox-/, '');
         const expirationDateFormatted = formatExpirationDate(expirationDate);
         const partitionValue = partitionKey?.topLevelSite || '';
+
+        // Check if the cookie is a favorite
+        const isFavorite = favorites.includes(getMainDomain(cookie.domain));
+        if (isFavorite) {
+            row.style.opacity = '0.5';
+        }
 
         // Prepare cell contents for the row
         const cellContents = [
@@ -268,6 +337,7 @@ function displayCookieDetails(mainDomain, cookies) {
             cookieSize, 
             domain, 
             partitionValue, 
+	    formattedStoreId,
             expirationDateFormatted || 'Session', 
             secure ? 'Yes' : 'No', 
             httpOnly ? 'Yes' : 'No', 
@@ -290,6 +360,9 @@ function displayCookieDetails(mainDomain, cookies) {
         // Add event listeners for the row
         row.addEventListener('click', async (event) => {
             event.stopPropagation();
+	    if (isFavorite) {
+                return;
+	    }
             await deleteCookie({
                 name: cookie.name,
                 domain: cookie.domain,
@@ -298,7 +371,7 @@ function displayCookieDetails(mainDomain, cookies) {
                 storeId: cookie.storeId,
                 partitionKey: cookie.partitionKey
             }, `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`);
-            row.remove();
+                row.remove();
         });
 
         // Add hover effects for the row
@@ -323,6 +396,12 @@ function displayCookieDetails(mainDomain, cookies) {
 
 // Function to delete a cookie
 async function deleteCookie(cookie) {
+    const isFavorite = favorites.includes(getMainDomain(cookie.domain));
+    if (isFavorite) {
+        console.log(`Skipping deletion for favorite cookie: ${cookie.name} from domain: ${cookie.domain}`);
+        return; // Skip deletion for this cookie
+    }
+
     const cookieUrl = getCookieUrl(cookie);
     const storeId = cookie.storeId || '0';
 
@@ -333,7 +412,6 @@ async function deleteCookie(cookie) {
         partitionKey: cookie.partitionKey
     });
 
-    // Call updateDisplay to refresh the popup content after deletion
     await updateDisplay();
 }
 
@@ -345,6 +423,11 @@ async function deleteCookies(filterFn) {
 
 // Function to delete all cookies from a specific domain
 async function deleteAllCookiesForDomain(domain) {
+    const isFavorite = favorites.includes(getMainDomain(domain));
+    if (isFavorite) {
+        return; // Skip deletion for this domain
+    }
+    
     const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
     tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
     await deleteCookies(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
@@ -353,7 +436,10 @@ async function deleteAllCookiesForDomain(domain) {
 
 // Function to delete cookies from closed tabs
 async function deleteCookiesFromClosedTabs(closedTabsCookies) {
-    await deleteCookies(cookie => closedTabsCookies.includes(cookie));
+    await deleteCookies(cookie => {
+        const isFavorite = favorites.includes(getMainDomain(cookie.domain));
+        return closedTabsCookies.includes(cookie) && !isFavorite;
+    });
 }
 
 // Function to undo the very last cookie deletion
@@ -456,12 +542,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Event listener for the icon2 to delete all cookies
+    // Event listener for the icon2 to delete all cookies except favorites
     icon2.addEventListener('click', async () => {
         if (!hasCookiesToDelete()) return;
         const userConfirmed = await showConfirmationModal(cookies);
         if (userConfirmed) {
-            await removeBrowsingData({ cookies: true });
+            const favoriteDomains = new Set(favorites.map(getMainDomain)); // Create a set of favorite domains
+            const cookiesToDelete = cookies.filter(cookie => !favoriteDomains.has(getMainDomain(cookie.domain)));
+            if (cookiesToDelete.length > 0) {
+                await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
+            }
             await updateDisplay();
         }
     });
@@ -532,7 +622,12 @@ function getCookieUrl(cookie) {
 async function updateDisplay() {
     await fetchCookiesAndTabs(); 
     displayCookies(true, true, true);
-    highlightActiveTabDomain();
+
+    // Highlight the active tab domain only if the setting is enabled
+    const settings = await browser.storage.local.get('enableActiveTabHighlight');
+    if (settings.enableActiveTabHighlight) {
+        highlightActiveTabDomain();
+    }
 }
 
 // Function to check if there are any cookies to be deleted (to avoid the confirmation dialogue if no cookie is listed)
@@ -599,9 +694,7 @@ const specialSLDs = {
     Türkiye: ['gov.tr', 'mil.tr', 'tsk.tr', 'k12.tr', 'edu.tr', 'av.tr', 'dr.tr', 'bel.tr', 'pol.tr', 'kep.tr', 'com.tr', 'net.tr', 'org.tr', 'info.tr', 'bbs.tr', 'nom.tr', 'tv.tr', 'biz.tr', 'tel.tr', 'gen.tr', 'web.tr', 'name.tr'],
     Ukraine: ['com.ua', 'in.ua', 'org.ua', 'net.ua', 'edu.ua', 'gov.ua'],
     United_Kingdom: ['ac.uk', 'bl.uk', 'co.uk', 'gov.uk', 'judiciary.uk', 'ltd.uk', 'me.uk', 'mod.uk', 'net.uk', 'nhs.uk', 'nic.uk', 'org.uk', 'parliament.uk', 'plc.uk', 'police.uk', 'rct.uk', 'royal.uk', 'sch.uk', 'ukaea.uk'],
-    United_States: [
-        // To add
-    ]
+    United_States: ['ak.gov', 'al.gov', 'ar.gov', 'az.gov', 'ca.gov', 'co.gov', 'ct.gov', 'de.gov', 'fl.gov', 'ga.gov', 'hi.gov', 'ia.gov', 'id.gov', 'il.gov', 'in.gov', 'ks.gov', 'ky.gov', 'la.gov', 'ma.gov', 'md.gov', 'me.gov', 'mi.gov', 'mn.gov', 'mo.gov', 'ms.gov', 'mt.gov', 'nc.gov', 'nd.gov', 'ne.gov', 'nh.gov', 'nj.gov', 'nm.gov', 'nv.gov', 'ny.gov', 'oh.gov', 'ok.gov', 'or.gov', 'pa.gov', 'ri.gov', 'sc.gov', 'sd.gov', 'tn.gov', 'tx.gov', 'ut.gov', 'va.gov', 'vt.gov', 'wa.gov', 'wi.gov', 'wv.gov', 'wy.gov'],
 };
 
 // Extracts the main domain from a full domain
