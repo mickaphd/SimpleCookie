@@ -43,7 +43,7 @@
 
 1. <b>Effortless cookie removal:</b> A single click on a website deletes all cookies associated with that domain. Clicking on a specific cookie line in the detailed table removes only that individual cookie.
 
-1. <b>Safety first:</b> A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered after clicking a website. A confirmation prompt also appears for the Dock shortcuts. Many footnotes have been added for educational purposes (icons, table headers, settings).
+1. <b>Safety first:</b> A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered after clicking a website. A confirmation prompt also appears for the Dock shortcuts. An export/import function (JSON format) allows you to backup your cookies. Many footnotes have been added for educational purposes (icons, table headers, settings).
 
 1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green) and your favorites. The 'trash can' icon deletes all cookies stored in Firefox except your favorites. The 'hand sparkles' icon launches the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
 
