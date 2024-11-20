@@ -116,7 +116,6 @@ async function applySettings() {
 
     // Highlight the active tab domain if enabled
     if (enableActiveTabHighlight) highlightActiveTabDomain();
-
 }
 
 // Initializes the extension by fetching data and applying settings
@@ -145,7 +144,7 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
     });
 
     const container = document.getElementById('cookies-container');
-    container.innerHTML = ''; // Clear the container
+    container.innerHTML = '';
 
     const websiteCounts = cookies.reduce((acc, { domain }) => {
         const mainDomain = getMainDomain(domain);
@@ -174,36 +173,27 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             star.className = 'fas fa-star star-icon';
             star.style.cursor = 'pointer';
 
-            // Set star state based on favorites
+            // Set star color and opacity based on favorites
             if (favorites.includes(website)) {
                 star.style.color = '#F7CA18';
                 star.style.opacity = '1';
             } else {
-                // Set star color based on the current theme
-                if (getCurrentTheme() === 'dark') {
-                    star.style.color = 'white';
-                } else {
-                    star.style.color = 'black';
-                }
-                star.style.opacity = '0.1';
+                star.style.color = getCurrentTheme() === 'dark' ? 'white' : 'black';
+                star.style.opacity = '0';
             }
 
             // Toggle star color and opacity on click
-            star.addEventListener('click', () => {
-                if (star.style.opacity === '0.1') {
+            star.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (favorites.includes(website)) {
+                    star.style.color = getCurrentTheme() === 'dark' ? 'white' : 'black';
+                    star.style.opacity = '0';
+                    const index = favorites.indexOf(website);
+                    if (index !== -1) favorites.splice(index, 1);
+                } else {
                     star.style.color = '#F7CA18';
                     star.style.opacity = '1';
                     favorites.push(website);
-                } else {
-                    // Set star color based on the current theme when not favorited
-                    if (getCurrentTheme() === 'dark') {
-                        star.style.color = 'white';
-                    } else {
-                        star.style.color = 'black';
-                    }
-                    star.style.opacity = '0.1';
-                    const index = favorites.indexOf(website);
-                    if (index !== -1) favorites.splice(index, 1);
                 }
                 // Save favorites to localStorage
                 localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -212,6 +202,20 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             element.textContent = `${website} (${count})`;
             element.prepend(star);
 
+            // Show star on hover
+            element.addEventListener('mouseenter', () => {
+                if (!favorites.includes(website)) {
+                    star.style.opacity = '0.4';
+                }
+            });
+
+            element.addEventListener('mouseleave', () => {
+                if (!favorites.includes(website)) {
+                    star.style.opacity = '0';
+                }
+            });
+
+            // Additional icon updates (if any)
             if (enableGhostIcon) 
                 updateIcon(element, website, 'fas fa-ghost ghost-icon', trackingSites.has(website));
                 
@@ -224,8 +228,9 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             const isActiveTab = openTabDomains.some(({ mainDomain }) => 
                 isDomainOrSubdomain(mainDomain, getMainDomain(website))
             );
-            if (isActiveTab) element.style.color = '#04A65D';
-
+            if (isActiveTab) {
+                element.style.color = '#04A65D';
+            }
             return element;
         });
 
@@ -252,20 +257,15 @@ function highlightActiveTabDomain() {
     const container = document.getElementById('cookies-container');
     if (!container) return;
 
-    const activeIconClass = 'active-tab-icon';
-    const existingIcon = container.querySelector(`.${activeIconClass}`);
-    if (existingIcon) existingIcon.remove();
+    container.querySelector('.active-tab-icon')?.remove();
 
-    // Find the element corresponding to the active tab's domain
     const activeElement = Array.from(container.childNodes).find(element => {
-        const domainText = element.textContent.trim().split(' ')[0];
-        return getMainDomain(domainText) === activeDomain;
+        return getMainDomain(element.textContent.trim().split(' ')[0]) === activeDomain;
     });
 
-    // Insert the active tab icon at the end of the activeElement
     if (activeElement) {
         const icon = document.createElement('i');
-        icon.classList.add('fas', 'fa-eye', activeIconClass);
+        icon.className = 'fas fa-eye active-tab-icon';
         icon.style.marginLeft = '5px';
         activeElement.appendChild(icon);
     }
@@ -425,7 +425,7 @@ async function deleteCookies(filterFn) {
 async function deleteAllCookiesForDomain(domain) {
     const isFavorite = favorites.includes(getMainDomain(domain));
     if (isFavorite) {
-        return; // Skip deletion for this domain
+        return; // Skip deletion for this domain if its a favorite
     }
     
     const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));

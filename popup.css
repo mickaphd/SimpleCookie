@@ -2,17 +2,8 @@
 /* Made with ❤ by Micka from Paris */
 
 
-/* Pop-up style */
-* {
-    margin: 0px;
-    padding: 0px;
-    box-sizing: border-box;
-}
-
 /* Body style */
 body {
-    padding-top: 0px;
-    padding-bottom: 0px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13.5px;
     background-color: var(--background-color);
@@ -39,17 +30,13 @@ body {
 
 /* Cookie container style */
 #cookies-container {
-    margin: 0px;
     max-height: 500px;
     max-width: 100%;
-    overflow-y: auto;
-    margin-bottom: 0px;
 }
 
 /* Cookie list style */
 #cookies-container div {
     text-align: left;
-    margin: 0px;
     padding: 2.5px 5px;
     color: var(--text-color);
     white-space: nowrap;
@@ -63,8 +50,8 @@ body {
 /* Favorite icon style */
 .star-icon {
     font-size: 12px;
-    margin-right: 5px;
-    margin-left: 0px;
+    margin-right: 3px;
+    margin-left: -1px;
 }
 
 /* Dock icon colors based on theme */
@@ -86,6 +73,8 @@ body {
 .partition-icon {
     font-size: 12px;
     opacity: 0.8;
+    margin-right: 2px;
+    margin-left: 2px;
 }
 
 .active-tab-icon {
@@ -123,14 +112,14 @@ body {
 #icon5:hover {
     opacity: 1;
     color: #FE0179;
-    transform: scale(1.3);
+    transform: scale(1.2);
 }
 
 /* Icon 4 special hover effect */
 #icon4:hover {
     opacity: 1;
     color: black;
-    transform: scale(1.3);
+    transform: scale(1.2);
 }
 
 /* Dark mode hover color for icon 4 */
@@ -145,6 +134,25 @@ body {
     display: inline-flex;
     color: #FE0179;
     opacity: 1;
+}
+
+/* Vertical separator style */
+.separator {
+    width: 1px; 
+    background-color: var(--separator-color);
+    height: 15px; 
+    margin: 0 7px;
+}
+
+/* Light and dark theme settings for separator */
+:root {
+    --separator-color: #DFDFE4;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --separator-color: #5F5E68;
+    }
 }
 
 /* Cookie table style */
@@ -201,7 +209,7 @@ body {
 .modal-content {
     background-color: none;
     margin: auto;
-    padding: 20px;
+    padding: 0px;
     width: 100%;
     display: flex;
     justify-content: center;

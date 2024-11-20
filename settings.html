@@ -1,37 +1,41 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
 <!-- Made with ❤ by Micka from Paris -->
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleCookie</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
     <style>
-
-        /* Base style */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
         }
 
         .settings-container {
             max-width: 500px;
-            margin: auto;
+            margin: 40px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            padding: 20px 40px;
+            position: relative;
         }
 
-        /* Header style */
         h3 {
             font-weight: bold;
-            font-size: 18px;
-            margin: 20px 0px 5px;
+            font-size: 20px;
+            margin: 5px 0 10px;
         }
 
         h3 i {
             margin-left: 10px;
+            color: #04A65D;
         }
 
-        /* Settings section style */
         .settings-section {
             display: flex;
             align-items: center;
@@ -40,11 +44,10 @@
 
         .settings-section i {
             margin-right: 21px;
+            color: #04A65D;
         }
 
         .settings-section label {
-            display: flex;
-            align-items: center;
             margin-left: auto;
         }
 
@@ -71,7 +74,6 @@
             left: 2px;
         }
 
-        /* Color scheme */
         @media (prefers-color-scheme: light) {
             .info-icon,
             .footer-icons i {
@@ -86,7 +88,6 @@
             }
         }
 
-        /* Dynamic tip popup style */
         #imagePopup {
             display: none;
             position: fixed;
@@ -100,10 +101,6 @@
             border-radius: 8px;
         }
 
-        #imagePopup img {
-            border-radius: 0;
-        }
-
         #overlay {
             display: none;
             position: fixed;
@@ -115,9 +112,8 @@
             z-index: 999;
         }
 
-        /* Links section style */
         .settings-section a {
-            text-decoration: none; 
+            text-decoration: none;
             color: inherit;
             display: flex;
             align-items: center;
@@ -128,201 +124,243 @@
             color: #F7CA18;
         }
 
-        /* Space between the main sections */
-        .section-spacing {
-            margin-bottom: 40px;
+        .version-text {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 10px;
+            color: #666;
         }
-
     </style>
 </head>
+
 <body>
-<div class="settings-container">
+    <div class="settings-container">
 
-    <!-- Insights -->
-    <div class="section-spacing">
-        <h3 title="Customize the details displayed in SimpleCookie by showing or hiding specific aspects of websites and their associated cookies.">Insights <i class="fas fa-magnifying-glass"></i></h3>
-        <hr>
-        <div class="settings-section">
-            <div title="Display an eye indicator next to the website corresponding to the active tab when you run SimpleCookie so you can easily locate, view and delete the cookies for the current website." style="display: flex; align-items: center;">
-                <i class="fas fa-eye" style="margin-right: 18px;"></i>
-                <span>Highlight the active tab</span>
+        <!-- Insights -->
+        <div class="section-spacing">
+            <h3 title="Customize the details displayed in SimpleCookie by showing or hiding specific aspects of websites and their associated cookies.">
+                Insights <i class="fas fa-magnifying-glass"></i>
+            </h3>
+            <hr>
+            <div class="settings-section">
+                <div title="Display an eye indicator next to the website corresponding to the active tab when you run SimpleCookie so you can easily locate, view and delete the cookies for the current website." style="display: flex; align-items: center;">
+                    <i class="fas fa-eye" style="margin-right: 18px;"></i>
+                    <span>Highlight the active tab</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="enableActiveTabHighlight" aria-label="Highlight the active tab">
+                </label>
             </div>
-            <label>
-                <input type="checkbox" id="enableActiveTabHighlight" aria-label="Highlight the active tab">
-            </label>
+
+            <div class="settings-section">
+                <div title="Display a ghost icon for known tracking sites using an internal list derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
+                    <i class="fas fa-ghost" style="margin-right: 24px;"></i>
+                    <span>Highlight tracking websites</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="enableGhostIcon" aria-label="Highlight known tracking websites">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Highlight websites that store cookies in special containers. Useful if you use Firefox's special container feature. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
+                    <i class="fas fa-road-barrier" style="margin-right: 16px;"></i>
+                    <span>Highlight websites from special containers</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="enableSpecialJarIcon" aria-label="Highlight special container websites">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information with many unrelated websites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
+                    <i class="fas fa-code-branch" style="margin-right: 22px;"></i>
+                    <span>Highlight websites with partitioned cookies</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="enablePartitionIcon" aria-label="Highlight partitioned cookie websites">
+                </label>
+            </div>
         </div>
 
-        <div class="settings-section">
-            <div title="Display a ghost icon for known tracking sites using an internal list derived from the 'Ghostery Tracker Database' to identify organizations/websites known to track behavior. While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
-                <i class="fas fa-ghost" style="margin-right: 24px;"></i>
-                <span>Highlight tracking websites</span>
+        <br>
+
+        <!-- myCleaner -->
+        <div class="section-spacing">
+            <h3 title="myCleaner is your personalized cleaner shortcut to delete what you want (browsing and download history are enabled by default). Feel free to select or deselect any of the options below.">
+                myCleaner <i class="fas fa-hand-sparkles"></i>
+            </h3>
+            <hr>
+            <div class="settings-section">
+                <div title="Small files stored by websites to remember things like user preferences and login information. Checking this box will cause all cookies to be deleted, regardless of their favorites status. If you want to delete everything but your favorite cookies, leave this checkbox unchecked and use the Trash can icon in the Dock, which does not override the Favorites status." style="display: flex; align-items: center;">
+                    <i class="fas fa-cookie-bite" style="margin-right: 20px;"></i>
+                    <span>Cookies <i class="fas fa-triangle-exclamation" style="color: #FE0179; margin-left: 10px;"></i></span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerCookies" aria-label="Clean cookies">
+                </label>
             </div>
-            <label>
-                <input type="checkbox" id="enableGhostIcon" aria-label="Highlight known tracking websites">
-            </label>
+
+            <div class="settings-section">
+                <div title="A record of websites you've visited, including dates and times." style="display: flex; align-items: center;">
+                    <i class="fas fa-clock-rotate-left" style="margin-right: 20px;"></i>
+                    <span>Browsing history</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerBrowsingHistory" aria-label="Clean browsing history">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Temporary files stored by Firefox to speed up loading times for frequently visited websites." style="display: flex; align-items: center;">
+                    <i class="fas fa-memory" style="margin-right: 18px;"></i>
+                    <span>Cached images and files</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerCache" aria-label="Clean cached images and files">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Saved information that automatically populates forms, such as names, addresses, and credit card details." style="display: flex; align-items: center;">
+                    <i class="fas fa-rectangle-list" style="margin-right: 18px;"></i>
+                    <span>Autofill form data</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerAutofill" aria-label="Clean form data">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="A log of files you've downloaded from the web, including their locations." style="display: flex; align-items: center;">
+                    <i class="fas fa-download" style="margin-right: 20px;"></i>
+                    <span>Download history</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerDownloadHistory" aria-label="Clean download history">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Scripts that run in the background to manage caching and background tasks for web applications." style="display: flex; align-items: center;">
+                    <i class="fas fa-cog" style="margin-right: 20px;"></i>
+                    <span>Service workers</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerService" aria-label="Clean service workers">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Information stored by browser extensions or plugins to enhance their functionality." style="display: flex; align-items: center;">
+                    <i class="fas fa-plug" style="margin-right: 24px;"></i>
+                    <span>Plugin data</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerPlugin" aria-label="Clean plugin data">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Data stored by websites on your device for offline access and persistent state." style="display: flex; align-items: center;">
+                    <i class="fas fa-box" style="margin-right: 22px;"></i>
+                    <span>Local storage data</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerLocal" aria-label="Clean local storage data">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="A low-level API for storing large amounts of structured data in the browser, allowing for efficient retrieval." style="display: flex; align-items: center;">
+                    <i class="fas fa-database" style="margin-right: 22px;"></i>
+                    <span>IndexedDB data</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerIndexed" aria-label="Clean indexedDB data">
+                </label>
+            </div>
+
+            <div class="settings-section">
+                <div title="Usernames and passwords that you have saved in the Firefox password manager. You should be very careful here..." style="display: flex; align-items: center;">
+                    <i class="fas fa-key" style="margin-right: 20px;"></i>
+                    <span>Saved passwords <i class="fas fa-triangle-exclamation" style="color: #FE0179; margin-left: 10px;"></i></span>
+                </div>
+                <label>
+                    <input type="checkbox" id="mycleanerPasswords" aria-label="Clean saved passwords">
+                </label>
+            </div>
         </div>
 
-        <div class="settings-section">
-            <div title="Highlight websites that store cookies in special containers. Useful if you use Firefox's special container feature. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
-                <i class="fas fa-road-barrier" style="margin-right: 16px;"></i>
-                <span>Highlight websites from special containers</span>
+        <br>
+
+        <!-- Advanced settings -->
+        <div class="section-spacing">
+            <h3 title="Extra settings for advanced users.">
+                Advanced <i class="fas fa-wrench"></i>
+            </h3>
+            <hr>
+            <div class="settings-section">
+                <a href="#" id="resetButton" title="Clear all of your favorites (not the cookies, just the 'star' status) and reset all of the above settings back to their factory defaults.">
+                    <i class="fas fa-undo" style="margin-right: 21px;"></i>Reset your favorites and settings
+                </a>
             </div>
-            <label>
-                <input type="checkbox" id="enableSpecialJarIcon" aria-label="Highlight special container websites">
-            </label>
+
+            <div class="settings-section">
+                <a href="#" id="exportCookies" title="Export all cookies stored by Firefox to a JSON file. Be careful here, as all cookies will be stored in clear text in an unencrypted file, allowing anyone with the file to eventually log in to some sites using your stored credentials.">
+                    <i class="fas fa-file-upload" style="margin-right: 25px;"></i>Export cookies
+                </a>
+            </div>
+
+            <div class="settings-section">
+                <a href="#" id="importCookies" title="Import cookies from a JSON file. Be careful what kind of cookies you are importing. Use this feature if you know what you are doing, or if you are importing your own JSON file that you have previously exported. Some cookies may not be imported if, for example, their expiry dates have been passed.">
+                    <i class="fas fa-file-download" style="margin-right: 25px;"></i>Import cookies
+                </a>
+            </div>
         </div>
 
-        <div class="settings-section">
-            <div title="Highlight websites that have partitioned cookies, also known as CHIPS (Cookies Having Independent Partitioned State). Without partitioning, third-party cookies can track users and combine their information with many unrelated websites. This is now restricted with CHIPS. These websites are always listed in SimpleCookie, only the icon is optional." style="display: flex; align-items: center;">
-                <i class="fas fa-code-branch" style="margin-right: 22px;"></i>
-                <span>Highlight websites with partitioned cookies</span>
+        <br>
+
+        <!-- Links -->
+        <div class="section-spacing">
+            <h3 title="Useful links (especially the last one!)">
+                Links <i class="fas fa-link"></i>
+            </h3>
+            <hr>
+            <div class="settings-section">
+                <a href="https://github.com/mickaphd/SimpleCookie" target="_blank" title="SimpleCookie repository on GitHub. Feel free to report any problems or requests there.">
+                    <i class="fab fa-github"></i> GitHub repository
+                </a>
             </div>
-            <label>
-                <input type="checkbox" id="enablePartitionIcon" aria-label="Highlight partitioned cookie websites">
-            </label>
+
+            <div class="settings-section">
+                <a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/" target="_blank" title="SimpleCookie in the Firefox Add-ons store.">
+                    <i class="fab fa-firefox"></i> Firefox Add-ons store
+                </a>
+            </div>
+
+            <div class="settings-section">
+                <a href="#" id="tipIcon" title="Tip me with bitcoin over the Lightning network (Bolt12 invoice). Thank you!">
+                    <i class="fas fa-bolt"></i>
+                    <span>Tip me with ₿ on Lightning!</span>
+                </a>
+            </div>
         </div>
 
+        <!-- Tip popup -->
+        <div id="imagePopup">
+            <p style="margin-top: 2px; font-size: 12px; color: #333;">
+                <b><i>Thank you for your support</i> ❤️</b>
+            </p>
+            <img src="resources/lightning_bolt12.jpeg" style="max-width: 220px; height: auto;">
+            <p style="margin-top: 2px; font-size: 12px; color: #333;">azuresync08@phoenixwallet.me</p>
+        </div>
+        <div id="overlay"></div>
+
+        <div id="version-text" class="version-text">SimpleCookie v.</div>
+
+        <script src="settings.js"></script>
     </div>
-
-    <!-- myCleaner -->
-    <div class="section-spacing">
-        <h3 title="myCleaner is your personalized cleaner shortcut to delete what you want (browsing and download history are enabled by default). Feel free to select or deselect any of the options below.">myCleaner <i class="fas fa-hand-sparkles"></i></h3>
-        <hr>
-        <div class="settings-section">
-            <div title="Small files stored by websites to remember things like user preferences and login information. Checking this box will cause all cookies to be deleted, regardless of their favorites status. If you want to delete everything but your favorite cookies, leave this checkbox unchecked and use the Trash can icon in the Dock, which does not override the Favorites status." style="display: flex; align-items: center;">
-                <i class="fas fa-cookie-bite" style="margin-right: 20px;"></i>
-                <span>Cookies (⚠️)</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerCookies" aria-label="Clean cookies">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="A record of websites you've visited, including dates and times." style="display: flex; align-items: center;">
-                <i class="fas fa-clock-rotate-left" style="margin-right: 20px;"></i>
-                <span>Browsing history</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerBrowsingHistory" aria-label="Clean browsing history">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Temporary files stored by Firefox to speed up loading times for frequently visited websites." style="display: flex; align-items: center;">
-                <i class="fas fa-memory" style="margin-right: 18px;"></i>
-                <span>Cached images and files</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerCache" aria-label="Clean cached images and files">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Saved information that automatically populates forms, such as names, addresses, and credit card details." style="display: flex; align-items: center;">
-                <i class="fas fa-rectangle-list" style="margin-right: 18px;"></i>
-                <span>Autofill form data</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerAutofill" aria-label="Clean form data">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="A log of files you've downloaded from the web, including their locations." style="display: flex; align-items: center;">
-                <i class="fas fa-download" style="margin-right: 20px;"></i>
-                <span>Download history</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerDownloadHistory" aria-label="Clean download history">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Scripts that run in the background to manage caching and background tasks for web applications." style="display: flex; align-items: center;">
-                <i class="fas fa-cog" style="margin-right: 20px;"></i>
-                <span>Service workers</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerService" aria-label="Clean service workers">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Information stored by browser extensions or plugins to enhance their functionality." style="display: flex; align-items: center;">
-                <i class="fas fa-plug" style="margin-right: 24px;"></i>
-                <span>Plugin data</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerPlugin" aria-label="Clean plugin data">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Data stored by websites on your device for offline access and persistent state." style="display: flex; align-items: center;">
-                <i class="fas fa-box" style="margin-right: 22px;"></i>
-                <span>Local storage data</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerLocal" aria-label="Clean local storage data">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="A low-level API for storing large amounts of structured data in the browser, allowing for efficient retrieval." style="display: flex; align-items: center;">
-                <i class="fas fa-database" style="margin-right: 22px;"></i>
-                <span>IndexedDB data</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerIndexed" aria-label="Clean indexedDB data">
-            </label>
-        </div>
-
-        <div class="settings-section">
-            <div title="Usernames and passwords that you have saved in the Firefox password manager. You should be very careful here..." style="display: flex; align-items: center;">
-                <i class="fas fa-key" style="margin-right: 20px;"></i>
-                <span>Saved passwords (⛔)</span>
-            </div>
-            <label>
-                <input type="checkbox" id="mycleanerPasswords" aria-label="Clean saved passwords">
-            </label>
-        </div>
-
-    </div>
-
-    <!-- Links -->
-    <div class="section-spacing">
-        <h3 title="Useful links (especially the last one!)">Links <i class="fas fa-link"></i></h3>
-        <hr>
-        <div class="settings-section">
-            <a href="https://github.com/mickaphd/SimpleCookie" target="_blank" title="SimpleCookie repository on GitHub. Feel free to report any problems or requests there.">
-                <i class="fab fa-github"></i> GitHub
-            </a>
-        </div>
-        <div class="settings-section">
-            <a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/" target="_blank" title="SimpleCookie in the Firefox Add-ons store.">
-                <i class="fab fa-firefox"></i> Firefox Add-ons store
-            </a>
-        </div>
-        <div class="settings-section">
-            <a href="#" id="tipIcon" title="Tip me with bitcoin over the Lightning network (Bolt12 invoice). Thank you!">
-                <i class="fas fa-bolt"></i>
-                <span>Tip me with ₿ on Lightning!</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Tip popup -->
-    <div id="imagePopup">
-        <p style="margin-top: 2px; font-size: 12px; color: #333;">
-            <b><i>Thank you for your support</i> ❤️</b>
-        </p>
-        <img src="resources/lightning_bolt12.jpeg" style="max-width: 220px; height: auto;">
-        <p style="margin-top: 2px; font-size: 12px; color: #333;">azuresync08@phoenixwallet.me</p>
-    </div>
-    <div id="overlay"></div>
-
-    <script src="settings.js"></script>
-</div>
 </body>
 </html>

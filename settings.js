@@ -28,13 +28,11 @@ const defaultSettings = {
     mycleanerPlugin: false,
     mycleanerLocal: false,
     mycleanerIndexed: false,
-    mycleanerPasswords: false
+    mycleanerPasswords: false,
 };
 
 // Function to save settings to storage
-async function saveSettings(settings) {
-    await browser.storage.local.set(settings);
-}
+const saveSettings = settings => browser.storage.local.set(settings);
 
 // Function to load settings from storage
 async function loadSettings() {
@@ -46,91 +44,16 @@ async function loadSettings() {
 async function initializeSettings() {
     const settings = await loadSettings();
     
-    // Set initial values for settings inputs
-    document.getElementById('enableGhostIcon').checked = settings.enableGhostIcon;
-    document.getElementById('enableSpecialJarIcon').checked = settings.enableSpecialJarIcon;
-    document.getElementById('enablePartitionIcon').checked = settings.enablePartitionIcon;
-    document.getElementById('enableActiveTabHighlight').checked = settings.enableActiveTabHighlight;
-    document.getElementById('mycleanerCookies').checked = settings.mycleanerCookies;
-    document.getElementById('mycleanerBrowsingHistory').checked = settings.mycleanerBrowsingHistory;
-    document.getElementById('mycleanerCache').checked = settings.mycleanerCache;
-    document.getElementById('mycleanerAutofill').checked = settings.mycleanerAutofill;
-    document.getElementById('mycleanerDownloadHistory').checked = settings.mycleanerDownloadHistory;
-    document.getElementById('mycleanerService').checked = settings.mycleanerService;
-    document.getElementById('mycleanerPlugin').checked = settings.mycleanerPlugin;
-    document.getElementById('mycleanerLocal').checked = settings.mycleanerLocal;
-    document.getElementById('mycleanerIndexed').checked = settings.mycleanerIndexed;
-    document.getElementById('mycleanerPasswords').checked = settings.mycleanerPasswords;
-
-    // Event listeners for settings changes
-    document.getElementById('enableGhostIcon').addEventListener('change', async function() {
-        settings.enableGhostIcon = this.checked;
-        await saveSettings({ enableGhostIcon: settings.enableGhostIcon });
-    });
-
-    document.getElementById('enableSpecialJarIcon').addEventListener('change', async function() {
-        settings.enableSpecialJarIcon = this.checked;
-        await saveSettings({ enableSpecialJarIcon: settings.enableSpecialJarIcon });
-    });
-
-    document.getElementById('enablePartitionIcon').addEventListener('change', async function() {
-        settings.enablePartitionIcon = this.checked;
-        await saveSettings({ enablePartitionIcon: settings.enablePartitionIcon });
-    });
-
-    document.getElementById('enableActiveTabHighlight').addEventListener('change', async function() {
-        settings.enableActiveTabHighlight = this.checked;
-        await saveSettings({ enableActiveTabHighlight: settings.enableActiveTabHighlight });
-    });
-
-    document.getElementById('mycleanerCookies').addEventListener('change', async function() {
-        settings.mycleanerCookies = this.checked;
-        await saveSettings({ mycleanerCookies: settings.mycleanerCookies });
-    });
-
-    document.getElementById('mycleanerBrowsingHistory').addEventListener('change', async function() {
-        settings.mycleanerBrowsingHistory = this.checked;
-        await saveSettings({ mycleanerBrowsingHistory: settings.mycleanerBrowsingHistory });
-    });
-
-    document.getElementById('mycleanerCache').addEventListener('change', async function() {
-        settings.mycleanerCache = this.checked;
-        await saveSettings({ mycleanerCache: settings.mycleanerCache });
-    });
-
-    document.getElementById('mycleanerAutofill').addEventListener('change', async function() {
-        settings.mycleanerAutofill = this.checked;
-        await saveSettings({ mycleanerAutofill: settings.mycleanerAutofill });
-    });
-
-    document.getElementById('mycleanerDownloadHistory').addEventListener('change', async function() {
-        settings.mycleanerDownloadHistory = this.checked;
-        await saveSettings({ mycleanerDownloadHistory: settings.mycleanerDownloadHistory });
-    });
-
-    document.getElementById('mycleanerService').addEventListener('change', async function() {
-        settings.mycleanerService = this.checked;
-        await saveSettings({ mycleanerService: settings.mycleanerService });
-    });
-
-    document.getElementById('mycleanerPlugin').addEventListener('change', async function() {
-        settings.mycleanerPlugin = this.checked;
-        await saveSettings({ mycleanerPlugin: settings.mycleanerPlugin });
-    });
-
-    document.getElementById('mycleanerLocal').addEventListener('change', async function() {
-        settings.mycleanerLocal = this.checked;
-        await saveSettings({ mycleanerLocal: settings.mycleanerLocal });
-    });
-
-    document.getElementById('mycleanerIndexed').addEventListener('change', async function() {
-        settings.mycleanerIndexed = this.checked;
-        await saveSettings({ mycleanerIndexed: settings.mycleanerIndexed });
-    });
-
-    document.getElementById('mycleanerPasswords').addEventListener('change', async function() {
-        settings.mycleanerPasswords = this.checked;
-        await saveSettings({ mycleanerPasswords: settings.mycleanerPasswords });
+    Object.keys(settings).forEach(key => {
+        const element = document.getElementById(key);
+        if (element) {
+            element.checked = settings[key];
+            element.addEventListener('change', async function() {
+                const isChecked = this.checked;
+                settings[key] = isChecked;
+                await saveSettings({ [key]: isChecked });
+            });
+        }
     });
 }
 
@@ -146,5 +69,109 @@ document.getElementById('overlay').addEventListener('click', function() {
     document.getElementById('overlay').style.display = 'none';
 });
 
-// Initialize settings on page load
-document.addEventListener('DOMContentLoaded', initializeSettings);
+// Reset settings and favorites
+document.getElementById('resetButton').addEventListener('click', async () => {
+    await browser.storage.local.clear();
+    localStorage.removeItem('favorites');
+    alert('Settings and favorites have been reset!');
+    window.location.reload();
+});
+
+// Get the add-on version dynamically
+const manifest = browser.runtime.getManifest();
+const version = manifest.version;   
+
+// Export cookies to a JSON file
+async function exportAllCookies() {
+    // Function to fetch all cookies from specified store IDs
+    async function fetchCookies(storeIds) {
+        const cookies = [];
+        for (const storeId of storeIds) {
+            const storeCookies = await browser.cookies.getAll({ storeId });
+            cookies.push(...storeCookies);
+        }
+        return cookies;
+    }
+
+    const containers = await browser.contextualIdentities.query({});
+    const storeIds = containers.map(container => container.cookieStoreId);
+    storeIds.push('firefox-default'); // Include the default store
+
+    const allCookies = await fetchCookies(storeIds);
+
+    // Create metadata
+    const metadata = {
+        SimpleCookie_version: version,
+        User_agent: navigator.userAgent,
+        Total_number_of_cookies: allCookies.length,
+        Date_of_export: new Date().toISOString()
+    };
+
+    // Combine metadata and cookies
+    const exportData = {
+        ...metadata,
+        cookies: allCookies.map(cookie => ({
+            ...cookie,
+            url: `http${cookie.secure ? 's' : ''}://${cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain}${cookie.path}`
+        }))
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cookies.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+document.getElementById('exportCookies').addEventListener('click', exportAllCookies);
+
+// Import cookies from a JSON file
+document.getElementById('importCookies').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = JSON.parse(e.target.result);
+            const cookies = data.cookies;
+            for (const cookie of cookies) {
+                const domain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+                const url = `http${cookie.secure ? 's' : ''}://${domain}${cookie.path}`;
+                const cookieToSet = {
+                    url: url,
+                    name: cookie.name,
+                    value: cookie.value,
+                    path: cookie.path,
+                    secure: cookie.secure,
+                    httpOnly: cookie.httpOnly,
+                    expirationDate: cookie.expirationDate,
+                    sameSite: cookie.sameSite,
+                    storeId: cookie.storeId,
+                    firstPartyDomain: cookie.firstPartyDomain,
+                    partitionKey: cookie.partitionKey
+                };
+                // Only set the domain property if the cookie is not host only
+                if (!cookie.hostOnly) {
+                    cookieToSet.domain = domain;
+                }
+                await browser.cookies.set(cookieToSet);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+});
+
+// Append the version to "SimpleCookie v." in the HTML
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('version-text').textContent += version;
+    initializeSettings();
+});
