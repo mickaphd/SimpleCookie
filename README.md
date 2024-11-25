@@ -12,24 +12,19 @@
 
 <h2>Main popup</h2>
 
-<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/5fdea558-3172-4800-9fb0-9ce1bf38c4c1">
-<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/99b7d302-fc4b-43bf-9ed4-637ecca63313">
-<img width="200" alt="Popup_light_delete" src="https://github.com/user-attachments/assets/20e7a2d9-6bff-4374-9e0d-76fae884246f">
-<img width="200" alt="Popup_light_undo" src="https://github.com/user-attachments/assets/2f702ae0-1ff7-4730-b42b-22293fdde6a9">
-<img width="200" alt="Popup_light_confirm" src="https://github.com/user-attachments/assets/42076672-5c47-4537-a575-dd27d5688401">
+<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/1a59f27b-1a36-4e80-9e56-fda879265956">
+<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/97db926d-2b55-45a6-b957-08875e8cb74a">
 
 
 <h2>Detailed table</h2>
 
-<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/e944e776-4f76-469d-963c-67b71c627c02">
-<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/c2b52b81-452f-4d67-aa77-5dfe49561874">
-
+<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/ac571367-dafc-4570-b306-937ca3b7dde1">
+<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/9c930905-2656-4def-bb40-4a1df699ef08">
 
 <h2>Settings</h2>
 
-<img width="350" alt="Settings_light_extensions-menu" src="https://github.com/user-attachments/assets/dc3bd32a-be55-4f9c-9e0a-f7260747c3bb">
-<img width="350" alt="Settings_dark" src="https://github.com/user-attachments/assets/2314965e-5844-41a2-804e-974f3aee4a26">
-
+<img width="350" alt="Settings_light_extensions-menu" src="https://github.com/user-attachments/assets/99cd6b10-74ef-4a58-a443-7bc515670a10">
+<img width="350" alt="Settings_dark" src="https://github.com/user-attachments/assets/c03a709e-e413-4b54-be9d-cd016a07a84e">
 
 <h2>Key features</h2>
 
