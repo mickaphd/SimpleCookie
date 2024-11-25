@@ -1,5 +1,5 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by Micka from Paris */
+/* Made with ❤ by micka from Paris */
 
 
 /* Body style */
@@ -37,7 +37,7 @@ body {
 /* Cookie list style */
 #cookies-container div {
     text-align: left;
-    padding: 2.5px 5px;
+    padding: 0.75px 5px 3.25px 5px;
     color: var(--text-color);
     white-space: nowrap;
 }

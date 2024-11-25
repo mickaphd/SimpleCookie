@@ -1,5 +1,5 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
-<!-- Made with ❤ by Micka from Paris -->
+<!-- Made with ❤ by micka from Paris -->
 
 
 <!DOCTYPE html>
@@ -16,15 +16,15 @@
 <body>
     <div id="popup">
         <div id="cookies-container"></div>
-        <div id="dock" aria-label="Dock shortcuts for quick cookie management actions and access to settings">
-            <i id="icon1" class="fas fa-broom" title="⚠️ Delete cookies from closed tabs, keeping only those associated with open tabs (whose domains are highlighted in green). Favorite cookies are protected and will not be deleted." aria-label="Delete cookies from closed tabs"></i>
-            <i id="icon2" class="fas fa-trash-can" title="⚠️ ⚠️ Delete all cookies stored in Firefox, except for favorites, which are protected." aria-label="Delete all cookies"></i>
+        <div id="dock">
+            <i id="icon1" class="fas fa-broom" title="⚠️ Delete cookies from closed tabs, keeping only those associated with open tabs (whose domains are highlighted in green). Favorite cookies will not be deleted." aria-label="Delete cookies from closed tabs"></i>
+            <i id="icon2" class="fas fa-trash-can" title="⚠️ ⚠️ Delete all cookies stored by Firefox. Favorite cookies will not be deleted." aria-label="Delete all cookies"></i>
             <i id="icon3" class="fas fa-hand-sparkles" title="⚠️ ⚠️ ⚠️ myCleaner → Delete your selection of browsing data that you can select in the settings. Note that selecting 'Cookies' in the myCleaner settings will bypass the favorites protection and delete all cookies without exception." aria-label="My Cleaner"></i>
     	    <div class="separator"></div>
             <a href="settings.html" target="_blank" aria-label="Access the configuration settings">
-                <i id="icon4" class="fas fa-gears" title="Access the configuration settings."></i>
+                <i id="icon4" class="fas fa-gears" title="Open the settings."></i>
             </a>
-            <i id="icon5" class="fas fa-backward" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent the restoration." aria-label="Undo the last cookie deletion" style="display:none;"></i>
+            <i id="icon5" class="fas fa-backward" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery." aria-label="Undo the last cookie deletion" style="display:none;"></i>
         </div>
     </div>
     <div id="confirmation-modal" class="modal">

@@ -1,27 +1,26 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by Micka from Paris */
+/* Made with ❤ by micka from Paris */
 
 
 // ==================== INITIALIZATION OF VARIABLES ====================
 
-// Set to hold unique tracking domains
-let trackingSites = new Set(); 
+// Set to hold the tracking list
+let trackingSites = new Set();
 
 // Array to store cookie objects
-let cookies = []; 
+let cookies = [];
 
 // Array to store tab objects
-let tabs = []; 
+let tabs = [];
 
 // Array to keep track of cookies that have been deleted for potential undo
-let tempDeletedCookies = []; 
+let tempDeletedCookies = [];
 
 // Variable to manage the timeout for the undo action
-let undoTimeout; 
+let undoTimeout;
 
 // Load favorites
 const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-
 
 
 // ==================== FETCHING THE DATA ====================
@@ -78,7 +77,6 @@ async function fetchData() {
 }
 
 
-
 // ==================== APPLYING THE SETTINGS ====================
 
 // Apply user settings from storage
@@ -126,7 +124,6 @@ async function initExtension() {
 
 // Call the initExtension function when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initExtension);
-
 
 
 // ==================== DISPLAYING THE DATA ====================
@@ -272,7 +269,6 @@ function highlightActiveTabDomain() {
 }
 
 
-
 // ==================== DETAILED TABLE ====================
 
 // Displays detailed cookie information in a table format
@@ -391,7 +387,6 @@ function displayCookieDetails(mainDomain, cookies) {
 }
 
 
-
 // ==================== DELETION OF COOKIES ====================
 
 // Function to delete a cookie
@@ -461,8 +456,9 @@ async function undoLastDeletion() {
 
         tempDeletedCookies = [];
         await fetchCookiesAndTabs();
-        displayCookies(true, true, true);
-        highlightActiveTabDomain();
+
+        // Update the display after undoing the deletion
+        await updateDisplay(); // This will now fetch settings and display cookies correctly
 
         const settingsIcon = document.getElementById('icon4');
         const undoIcon = document.getElementById('icon5');
@@ -516,7 +512,6 @@ async function myCleaner() {
         await browser.browsingData.remove({ since: 0 }, mycleaner);
     }
 }
-
 
 
 // ==================== EVENT LISTENERS ====================
@@ -594,7 +589,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 
-
 // ==================== HELPER FUNCTIONS ====================
 
 // Function to handle the undo icon visibility and timeout
@@ -621,10 +615,18 @@ function getCookieUrl(cookie) {
 // Function to update cookies and tabs display
 async function updateDisplay() {
     await fetchCookiesAndTabs(); 
-    displayCookies(true, true, true);
+
+    // Fetch settings again to ensure they are current
+    const settings = await browser.storage.local.get([
+        'enableGhostIcon',
+        'enableSpecialJarIcon',
+        'enablePartitionIcon',
+        'enableActiveTabHighlight'
+    ]);
+
+    displayCookies(settings.enableGhostIcon, settings.enableSpecialJarIcon, settings.enablePartitionIcon);
 
     // Highlight the active tab domain only if the setting is enabled
-    const settings = await browser.storage.local.get('enableActiveTabHighlight');
     if (settings.enableActiveTabHighlight) {
         highlightActiveTabDomain();
     }

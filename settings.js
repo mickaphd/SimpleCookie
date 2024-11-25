@@ -1,5 +1,5 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
-/* Made with ❤ by Micka from Paris */
+/* Made with ❤ by micka from Paris */
 
 
 // Detect if dark mode is enabled
