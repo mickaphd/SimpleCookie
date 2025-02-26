@@ -60,7 +60,7 @@ async function fetchAllCookies() {
     const allCookies = (await Promise.all(cookiePromises)).flat();
 
     // Optimizing uniqueness check
-    const uniqueCookies = [...new Map(allCookies.map(cookie => [`${cookie.name}-${cookie.value}-${cookie.domain}-${cookie.partitionKey}-${cookie.storeId}-${cookie.path}`, cookie])).values()];
+    const uniqueCookies = [...new Map(allCookies.map(cookie => [`${cookie.name}-${cookie.value}-${cookie.size}-${cookie.domain}-${cookie.partitionKey}-${cookie.storeId}-${cookie.expirationDate}-${cookie.secure}-${cookie.httpOnly}-${cookie.sameSite}-${cookie.path}`, cookie])).values()];
 
     return uniqueCookies;
 }
