@@ -16,8 +16,8 @@ body {
     --background-color: #FFF;
     --text-color: #000;
     --highlight-color: #DFDFE4;
-    --icon-color-light: #000;
-    --icon-color-dark: #FFF;
+    --cookie-counter-color: #000;
+    --separator-color: #DFDFE4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +25,13 @@ body {
         --background-color: #42414C;
         --text-color: #FCFCFF;
         --highlight-color: #5F5E68;
+        --cookie-counter-color: #FCFCFF;
+        --separator-color: #5F5E68;
+    }
+
+    /* Invert insight icon colors */
+    .insight-icon {
+        filter: invert(100%);
     }
 }
 
@@ -33,12 +40,13 @@ body {
     max-height: 500px;
     max-width: 100%;
     overflow-y: auto;
+    margin-top: 3px;
 }
 
 /* Cookie list style */
 #cookies-container div {
     text-align: left;
-    padding: 0.75px 5px 3.25px 5px;
+    padding: 1.5px 4px 3px 4px;
     color: var(--text-color);
     white-space: nowrap;
 }
@@ -48,94 +56,68 @@ body {
     cursor: pointer;
 }
 
-/* Favorite icon style */
-.star-icon {
-    font-size: 12px;
-    margin-right: 3px;
-    margin-left: -1px;
-}
-
-/* Dock icon colors based on theme */
-@media (prefers-color-scheme: light) {
-    #icon1, #icon2, #icon3, #icon4 {
-        color: var(--icon-color-light);
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    #icon1, #icon2, #icon3, #icon4 {
-        color: var(--icon-color-dark);
-    }
-}
-
-/* Insights icon style */
-.ghost-icon,
-.container-icon,
-.partition-icon {
-    font-size: 12px;
-    opacity: 0.8;
-    margin-right: 2px;
-    margin-left: 2px;
-}
-
-.active-tab-icon {
-    font-size: 12px;
-    opacity: 1;
-    color: #F7CA18;
-}
-
 /* Dock style */
 #dock {
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
-    margin: 5px 0px;
+    margin: 5px 0;
     width: 100%; 
     position: sticky;
 }
 
-#dock i {
-    margin: 0px 7px;
+.dock-icon {
+    width: 17px;
+    height: 17px;
+    margin: 0 6px;
     cursor: pointer;
-    display: inline-flex;
+    opacity: 0.1;
+    transition: opacity 0.1s, transform 0.1s;
+    display: flex;
     align-items: center;
 }
 
-/* Default opacity for icons 1, 2, 3 and 4 */
-#icon1, #icon2, #icon3, #icon4 {
-    opacity: 0.1;
-}
-
-/* Hover effects for icons 1, 2 and 3 */
-#icon1:hover,
-#icon2:hover,
-#icon3:hover,
-#icon5:hover {
+.dock-icon:hover {
     opacity: 1;
-    color: #FE0179;
     transform: scale(1.2);
 }
 
-/* Icon 4 special hover effect */
-#icon4:hover {
-    opacity: 1;
-    color: black;
-    transform: scale(1.2);
-}
-
-/* Dark mode hover color for icon 4 */
-@media (prefers-color-scheme: dark) {
-    #icon4:hover {
-        color: white;
-    }
-}
-
-/* Icon 5 special style */
 #icon5 {
     display: inline-flex;
     color: #FE0179;
     opacity: 1;
+}
+
+/* Dock icon colors based on theme */
+@media (prefers-color-scheme: light) {
+    .dock-icon {
+        filter: invert(0%);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .dock-icon {
+        filter: invert(100%);
+    }
+    
+    /* Ensure icon 5 is unaffected */
+    #icon5 {
+        filter: none;
+    }
+}
+
+/* Favorite and insight icon styles */
+.star-icon, .insight-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: bottom;
+    margin-left: 5px;
+
+}
+
+.star-icon {
+    margin: 0 6px 0 3px;
 }
 
 /* Vertical separator style */
@@ -144,56 +126,6 @@ body {
     background-color: var(--separator-color);
     height: 15px; 
     margin: 0 7px;
-}
-
-/* Light and dark theme settings for separator */
-:root {
-    --separator-color: #DFDFE4;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --separator-color: #5F5E68;
-    }
-}
-
-/* Cookie table style */
-.cookie-table {
-    border-collapse: collapse;
-    font-size: 12px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-    table-layout: fixed;
-    width: 100%;
-}
-
-.header-cell {
-    padding: 4px;
-    border: none;
-    text-align: center;
-    background-color: var(--header-background-color, #f2f2f2);
-    color: var(--header-color, black);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.cell {
-    padding: 4px;
-    border: none;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Dark mode support for the table */
-@media (prefers-color-scheme: dark) {
-    .cookie-table {
-        color: white;
-    }
-    .header-cell {
-        background-color: #333;
-        color: white;
-    }
 }
 
 /* Confirmation dialog box style */
@@ -205,11 +137,10 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
 .modal-content {
-    background-color: none;
     margin: auto;
     padding: 0px;
     width: 100%;
@@ -223,16 +154,51 @@ body {
 .icon-button {
     background: none;
     border: none;
-    color: white;
     cursor: pointer;
-    font-size: 26px;
     margin: 2px;
 }
 
-#confirm-yes:hover i {
-    color: #04A65D;
+/* Cookie table style */
+.cookie-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    table-layout: fixed;
+    width: 100%;
 }
 
-#confirm-no:hover i {
-    color: #FE0179;
+.cell, .header-cell {
+    padding: 4px;
+    border: none;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.header-cell {
+    background-color: var(--header-background-color, #f2f2f2);
+    color: var(--header-color, black);
+    word-wrap: break-word;
+}
+
+.cell {
+    text-overflow: ellipsis;
+}
+
+/* Dark mode support for the table */
+@media (prefers-color-scheme: dark) {
+    .cookie-table {
+        color: white;
+    }
+    .header-cell {
+        background-color: #333;
+        color: white;
+    }
+}
+
+/* Total number of cookies */
+#cookie-counter {
+    margin-left: 4px;
+    margin-bottom: 2px;
+    font-size: 16px;
 }

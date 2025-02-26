@@ -33,46 +33,54 @@ async function fetchTrackerDB() {
     trackingSites = new Set(text.split('\n').map(domain => domain.trim()).filter(Boolean));
 }
 
-// Fetches all cookies from a specified store
-async function fetchCookiesFromStore(storeId) {
-    const normalCookies = await browser.cookies.getAll({ storeId });
-    const partitionedCookies = await browser.cookies.getAll({ storeId, partitionKey: {} });
-    return [...normalCookies, ...partitionedCookies];
-}
-
 // Fetches all cookies from all containers and avoid duplicates
 async function fetchAllCookies() {
     const containers = await browser.contextualIdentities.query({});
-    const cookiePromises = containers.map(container => fetchCookiesFromStore(container.cookieStoreId));
-    cookiePromises.push(fetchCookiesFromStore("")); // Fetch cookies from the default store
+    const cookiePromises = [];
 
-    const allCookies = (await Promise.all(cookiePromises)).flat();
-    const uniqueCookiesMap = new Map();
-    
-    allCookies.forEach(cookie => {
-        const { name, value, size, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite } = cookie;
-        
-        // Create a unique key
-        const key = `${name}|${value}|${size}|${domain}|${partitionKey}|${storeId}|${expirationDate}|${secure}|${httpOnly}|${sameSite}`;
-        
-        // Store the cookie in the map if the key is not already present
-        if (!uniqueCookiesMap.has(key)) {
-            uniqueCookiesMap.set(key, cookie);
+    // Helper function to add cookie fetch promises
+    const addCookiePromise = (storeId, partitionKey = null) => {
+        const options = { storeId };
+        if (partitionKey !== null) {
+            options.partitionKey = partitionKey;
         }
+        cookiePromises.push(browser.cookies.getAll(options));
+    };
+
+    // Fetch cookies for each container and the default store
+    containers.forEach(container => {
+        addCookiePromise(container.cookieStoreId);
+        addCookiePromise(container.cookieStoreId, {});
     });
 
-    // Return the unique cookies as an array
-    return Array.from(uniqueCookiesMap.values());
+    // Fetch cookies from the default store
+    addCookiePromise("");
+    addCookiePromise("", {});
+
+    const allCookies = (await Promise.all(cookiePromises)).flat();
+
+    // Optimizing uniqueness check
+    const uniqueCookies = [...new Map(allCookies.map(cookie => [`${cookie.name}-${cookie.value}-${cookie.domain}-${cookie.partitionKey}-${cookie.storeId}-${cookie.path}`, cookie])).values()];
+
+    return uniqueCookies;
 }
 
 // Fetches all cookies and open tabs
 async function fetchCookiesAndTabs() {
+    // Fetch cookies and store them in the cookies array
     cookies = await fetchAllCookies();
+
+    // Update the cookie counter in the UI to reflect the number of fetched cookies
+    const cookieCounter = document.getElementById('cookie-counter');
+    cookieCounter.textContent = cookies.length;
+
+    // Fetch all open tabs and store them in the tabs array
     tabs = await browser.tabs.query({});
 }
 
 // Fetches tracking sites, cookies, and tabs
 async function fetchData() {
+    // Concurrently fetch tracking sites and cookies/tabs
     await Promise.all([fetchTrackerDB(), fetchCookiesAndTabs()]);
 }
 
@@ -133,7 +141,7 @@ function getCurrentTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-// Main function to display cookies, favorites and insights icons
+// Main function to display cookies, favorites, and insights icons
 function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
     const openTabDomains = tabs.map(({ url }) => {
         const hostname = new URL(url).hostname;
@@ -166,30 +174,25 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
         .map(([website, count]) => {
             const element = document.createElement('div');
 
-            const star = document.createElement('i');
-            star.className = 'fas fa-star star-icon';
-            star.style.cursor = 'pointer';
+            const star = document.createElement('img');
+            star.src = 'resources/star_empty.svg';
+            star.alt = 'Favorite Star Icon';
+            star.className = 'star-icon';
 
-            // Set star color and opacity based on favorites
+            // Set the star icon based on favorites
             if (favorites.includes(website)) {
-                star.style.color = '#F7CA18';
-                star.style.opacity = '1';
-            } else {
-                star.style.color = getCurrentTheme() === 'dark' ? 'white' : 'black';
-                star.style.opacity = '0';
+                star.src = 'resources/star_full.svg';
             }
 
-            // Toggle star color and opacity on click
+            // Toggle star icon on click
             star.addEventListener('click', (event) => {
                 event.stopPropagation();
                 if (favorites.includes(website)) {
-                    star.style.color = getCurrentTheme() === 'dark' ? 'white' : 'black';
-                    star.style.opacity = '0';
+                    star.src = 'resources/star_empty.svg';
                     const index = favorites.indexOf(website);
                     if (index !== -1) favorites.splice(index, 1);
                 } else {
-                    star.style.color = '#F7CA18';
-                    star.style.opacity = '1';
+                    star.src = 'resources/star_full.svg';
                     favorites.push(website);
                 }
                 // Save favorites to localStorage
@@ -199,35 +202,28 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             element.textContent = `${website} (${count})`;
             element.prepend(star);
 
-            // Show star on hover
-            element.addEventListener('mouseenter', () => {
-                if (!favorites.includes(website)) {
-                    star.style.opacity = '0.4';
-                }
-            });
+            // Tooltip text explaining left and right click actions
+            element.title = `Left click will delete all cookies for "${website}". Right click will display detailed information for each of these cookies.`;
 
-            element.addEventListener('mouseleave', () => {
-                if (!favorites.includes(website)) {
-                    star.style.opacity = '0';
-                }
-            });
-
-            // Additional icon updates (if any)
+            // Additional icon updates
             if (enableGhostIcon) 
-                updateIcon(element, website, 'fas fa-ghost ghost-icon', trackingSites.has(website));
-                
+                updateIcon(element, website, 'resources/insight_ghost.svg', trackingSites.has(website));
+
             if (enableSpecialJarIcon) 
-                updateIcon(element, website, 'fas fa-road-barrier container-icon', nonDefaultContainerDomains.has(getMainDomain(website)));
-                
+                updateIcon(element, website, 'resources/insight_container.svg', nonDefaultContainerDomains.has(getMainDomain(website)));
+
             if (enablePartitionIcon) 
-                updateIcon(element, website, 'fas fa-code-branch partition-icon', partitionedDomains.has(getMainDomain(website)));
+                updateIcon(element, website, 'resources/insight_partition.svg', partitionedDomains.has(getMainDomain(website)));
 
             const isActiveTab = openTabDomains.some(({ mainDomain }) => 
                 isDomainOrSubdomain(mainDomain, getMainDomain(website))
             );
+
+            // Green color for the open tabs
             if (isActiveTab) {
-                element.style.color = '#04A65D';
+                element.style.color = '#00b765';
             }
+
             return element;
         });
 
@@ -236,10 +232,12 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
 }
 
 // Generic function to update the icons
-function updateIcon(element, domain, iconClass, condition) {
+function updateIcon(element, domain, iconSrc, condition) {
     if (condition) {
-        const icon = document.createElement('span');
-        icon.classList.add(...iconClass.split(' '));
+        const icon = document.createElement('img');
+        icon.src = iconSrc;
+        icon.alt = `${domain} icon`;
+        icon.className = 'insight-icon';
         element.appendChild(document.createTextNode(' '));
         element.appendChild(icon);
     }
@@ -261,9 +259,11 @@ function highlightActiveTabDomain() {
     });
 
     if (activeElement) {
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-eye active-tab-icon';
-        icon.style.marginLeft = '5px';
+        const icon = document.createElement('img');
+        icon.src = 'resources/insight_eye.svg';
+        icon.alt = 'Active Tab Icon';
+        icon.className = 'insight-icon active-tab-icon';
+
         activeElement.appendChild(icon);
     }
 }
@@ -290,7 +290,7 @@ function displayCookieDetails(mainDomain, cookies) {
         { title: 'Domain', description: 'The domain for which the cookie is valid. The cookie will only be sent to the specified domain and its subdomains.' },
         { title: 'Partition', description: 'Partition attribute for Cookies Having Independent Partitioned State (CHIPS). Without cookie partitioning, third-party cookies can track users across the web. CHIPS, on the other hand, are restricted to the specific site on which they are set, preventing cross-site tracking while still allowing useful functions such as maintaining state across a domain and its subdomains.' },
         { title: 'Container', description: 'The container in which the cookie is stored. Containers (also known as stores or jars) are used to separate cookies and other site data for different contexts or identities, allowing users to manage their online activities and privacy by keeping data from different sites separate. With Firefox Total Cookie Protection now enabled by default, most of your cookies are automatically restricted to the sites that created them, whether you use a specific container or not.' },
-	{ title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
+        { title: 'Expiration', description: 'The date on which the cookie will expire. A session cookie is a type of cookie that does not have an expiration date set. These cookies are stored in temporary memory and are deleted when closing the browser. Persistent cookies have an expiration date and are stored on the device until they expire or are explicitly deleted.' },
         { title: 'Secure', description: 'When this flag is set, the cookie will only be sent over secure (HTTPS) connections, adding an extra layer of security.' },
         { title: 'HttpOnly', description: 'When this flag is set, the cookie is not accessible via JavaScript, which helps prevent certain types of cross-site scripting attacks.' },
         { title: 'SameSite', description: 'This attribute controls when the cookie will be sent in cross-site requests. It can be set to Strict, Lax, or None. Strict means the cookie will only be sent in a first-party context, Lax restricts the cookie to top-level navigation and safe HTTP methods, and None means the cookie will be sent in all contexts.' }
@@ -316,7 +316,7 @@ function displayCookieDetails(mainDomain, cookies) {
         const row = table.insertRow();
         const { name, value, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite } = cookie;
         const cookieSize = calculateCookieSize(cookie);
-	const formattedStoreId = storeId.replace(/^firefox-/, '');
+        const formattedStoreId = storeId.replace(/^firefox-/, '');
         const expirationDateFormatted = formatExpirationDate(expirationDate);
         const partitionValue = partitionKey?.topLevelSite || '';
 
@@ -333,7 +333,7 @@ function displayCookieDetails(mainDomain, cookies) {
             cookieSize, 
             domain, 
             partitionValue, 
-	    formattedStoreId,
+            formattedStoreId,
             expirationDateFormatted || 'Session', 
             secure ? 'Yes' : 'No', 
             httpOnly ? 'Yes' : 'No', 
@@ -356,9 +356,11 @@ function displayCookieDetails(mainDomain, cookies) {
         // Add event listeners for the row
         row.addEventListener('click', async (event) => {
             event.stopPropagation();
-	    if (isFavorite) {
+            if (isFavorite) {
                 return;
-	    }
+            }
+            // Store the deleted cookie for undo functionality
+            tempDeletedCookies.push({ ...cookie }); // Store the cookie before deletion
             await deleteCookie({
                 name: cookie.name,
                 domain: cookie.domain,
@@ -367,7 +369,8 @@ function displayCookieDetails(mainDomain, cookies) {
                 storeId: cookie.storeId,
                 partitionKey: cookie.partitionKey
             }, `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`);
-                row.remove();
+            row.remove();
+            showUndoIcon(); // Show undo option after deletion
         });
 
         // Add hover effects for the row
@@ -392,10 +395,7 @@ function displayCookieDetails(mainDomain, cookies) {
 // Function to delete a cookie
 async function deleteCookie(cookie) {
     const isFavorite = favorites.includes(getMainDomain(cookie.domain));
-    if (isFavorite) {
-        console.log(`Skipping deletion for favorite cookie: ${cookie.name} from domain: ${cookie.domain}`);
-        return; // Skip deletion for this cookie
-    }
+    if (isFavorite) return; // Skip deletion for this cookie
 
     const cookieUrl = getCookieUrl(cookie);
     const storeId = cookie.storeId || '0';
@@ -418,11 +418,8 @@ async function deleteCookies(filterFn) {
 
 // Function to delete all cookies from a specific domain
 async function deleteAllCookiesForDomain(domain) {
-    const isFavorite = favorites.includes(getMainDomain(domain));
-    if (isFavorite) {
-        return; // Skip deletion for this domain if its a favorite
-    }
-    
+    if (favorites.includes(getMainDomain(domain))) return; // Skip deletion for this domain if it's a favorite
+
     const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
     tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
     await deleteCookies(cookie => getMainDomain(cookie.domain) === getMainDomain(domain));
@@ -432,8 +429,7 @@ async function deleteAllCookiesForDomain(domain) {
 // Function to delete cookies from closed tabs
 async function deleteCookiesFromClosedTabs(closedTabsCookies) {
     await deleteCookies(cookie => {
-        const isFavorite = favorites.includes(getMainDomain(cookie.domain));
-        return closedTabsCookies.includes(cookie) && !isFavorite;
+        return closedTabsCookies.includes(cookie) && !favorites.includes(getMainDomain(cookie.domain));
     });
 }
 
@@ -456,9 +452,7 @@ async function undoLastDeletion() {
 
         tempDeletedCookies = [];
         await fetchCookiesAndTabs();
-
-        // Update the display after undoing the deletion
-        await updateDisplay(); // This will now fetch settings and display cookies correctly
+        await updateDisplay();
 
         const settingsIcon = document.getElementById('icon4');
         const undoIcon = document.getElementById('icon5');
@@ -485,7 +479,6 @@ async function myCleaner() {
         'mycleanerLocal',
         'mycleanerIndexed',
         'mycleanerPasswords'
-
     ]);
 
     const options = {
@@ -501,12 +494,9 @@ async function myCleaner() {
         passwords: settings.mycleanerPasswords
     };
 
-    const mycleaner = Object.entries(options)
-        .filter(([, value]) => value)
-        .reduce((acc, [key]) => {
-            acc[key] = true;
-            return acc;
-        }, {});
+    const mycleaner = Object.fromEntries(
+        Object.entries(options).filter(([, value]) => value)
+    );
 
     if (Object.keys(mycleaner).length > 0) {
         await browser.browsingData.remove({ since: 0 }, mycleaner);
@@ -542,7 +532,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!hasCookiesToDelete()) return;
         const userConfirmed = await showConfirmationModal(cookies);
         if (userConfirmed) {
-            const favoriteDomains = new Set(favorites.map(getMainDomain)); // Create a set of favorite domains
+            const favoriteDomains = new Set(favorites.map(getMainDomain));
             const cookiesToDelete = cookies.filter(cookie => !favoriteDomains.has(getMainDomain(cookie.domain)));
             if (cookiesToDelete.length > 0) {
                 await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
@@ -709,7 +699,6 @@ function getMainDomain(domain) {
             return parts.slice(-3).join('.');
         }
     }
-
     return parts.slice(numLevels).join('.');
 }
 

@@ -8,7 +8,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleCookie</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
     <link rel="stylesheet" href="popup.css">
     <script defer src="popup.js"></script>
@@ -17,22 +16,27 @@
     <div id="popup">
         <div id="cookies-container"></div>
         <div id="dock">
-            <i id="icon1" class="fas fa-broom" title="⚠️ Delete cookies from closed tabs, keeping only those associated with open tabs (whose domains are highlighted in green). Favorite cookies will not be deleted." aria-label="Delete cookies from closed tabs"></i>
-            <i id="icon2" class="fas fa-trash-can" title="⚠️ ⚠️ Delete all cookies stored by Firefox. Favorite cookies will not be deleted." aria-label="Delete all cookies"></i>
-            <i id="icon3" class="fas fa-hand-sparkles" title="⚠️ ⚠️ ⚠️ myCleaner → Delete your selection of browsing data that you can select in the settings. Note that selecting 'Cookies' in the myCleaner settings will bypass the favorites protection and delete all cookies without exception." aria-label="My Cleaner"></i>
-    	    <div class="separator"></div>
+            <img class="dock-icon" id="icon1" src="resources/icon1.svg" title="⚠️ Delete cookies from closed tabs, keeping only those associated with open tabs (whose domains are highlighted in green). Favorite cookies will not be deleted." aria-label="Delete cookies from closed tabs"/>
+            <img class="dock-icon" id="icon2" src="resources/icon2.svg" title="⚠️ ⚠️ Delete all cookies stored by Firefox. Favorite cookies will not be deleted." aria-label="Delete all cookies"/>
+            <img class="dock-icon" id="icon3" src="resources/icon3.svg" title="⚠️ ⚠️ ⚠️ myCleaner → Delete your selection of browsing data that you can select in the settings. Note that selecting 'Cookies' in the myCleaner settings will bypass the favorites protection and delete all cookies without exception." aria-label="My Cleaner"/>
+            <div class="separator"></div>
             <a href="settings.html" target="_blank" aria-label="Access the configuration settings">
-                <i id="icon4" class="fas fa-gears" title="Open the settings."></i>
+                <img class="dock-icon" id="icon4" src="resources/icon4.svg" title="Open the settings."/>
             </a>
-            <i id="icon5" class="fas fa-backward" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery." aria-label="Undo the last cookie deletion" style="display:none;"></i>
+            <img class="dock-icon" id="icon5" src="resources/icon5.svg" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery." aria-label="Undo the last cookie deletion" style="display:none;"/>
+            <span id="cookie-counter" class="dock-icon" title="Total number of cookies."></span>
         </div>
     </div>
     <div id="confirmation-modal" class="modal">
         <div class="modal-content">
             <p id="confirmation-message"></p>
             <div class="modal-buttons">
-                <button id="confirm-yes" class="icon-button"><i class="fas fa-square-check"></i></button>
-                <button id="confirm-no" class="icon-button"><i class="fas fa-square-xmark"></i></button>
+                <button id="confirm-yes" class="icon-button">
+                    <img src="resources/confirm_yes.svg" alt="Confirm Yes" width="35" height="35" />
+                </button>
+                <button id="confirm-no" class="icon-button">
+                    <img src="resources/confirm_no.svg" alt="Confirm No" width="35" height="35" />
+                </button>
             </div>
         </div>
     </div>

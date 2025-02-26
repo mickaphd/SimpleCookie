@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "SimpleCookie",
-  "version": "2.8",
+  "version": "2.9",
   "description": "A minimalist yet efficient cookie manager for Firefox",
   "author": "micka",
   "homepage_url": "https://github.com/mickaphd/SimpleCookie",

@@ -81,42 +81,78 @@ document.getElementById('resetButton').addEventListener('click', async () => {
 const manifest = browser.runtime.getManifest();
 const version = manifest.version;   
 
+// Append the version to "SimpleCookie v" in the HTML
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('version-text').textContent += version;
+    initializeSettings();
+});
+
+
+// ==================== EXPORT / IMPORT ====================
+
+// Fetches all cookies from all containers and avoid duplicates (same code used in the popup.js file)
+async function fetchAllCookies() {
+    const containers = await browser.contextualIdentities.query({});
+    const cookiePromises = [];
+
+    // Helper function to add cookie fetch promises
+    const addCookiePromise = (storeId, partitionKey = null) => {
+        const options = { storeId };
+        if (partitionKey !== null) {
+            options.partitionKey = partitionKey;
+        }
+        cookiePromises.push(browser.cookies.getAll(options));
+    };
+
+    // Fetch cookies for each container and the default store
+    containers.forEach(container => {
+        addCookiePromise(container.cookieStoreId);
+        addCookiePromise(container.cookieStoreId, {});
+    });
+
+    // Fetch cookies from the default store
+    addCookiePromise("");
+    addCookiePromise("", {});
+
+    const allCookies = (await Promise.all(cookiePromises)).flat();
+
+    // Optimizing uniqueness check
+    const uniqueCookies = [...new Map(allCookies.map(cookie => [`${cookie.name}-${cookie.value}-${cookie.domain}-${cookie.partitionKey}-${cookie.storeId}-${cookie.path}`, cookie])).values()];
+
+    return uniqueCookies;
+}
+
 // Export cookies to a JSON file
 async function exportAllCookies() {
-    // Function to fetch all cookies from specified store IDs
-    async function fetchCookies(storeIds) {
-        const cookies = [];
-        for (const storeId of storeIds) {
-            const storeCookies = await browser.cookies.getAll({ storeId });
-            cookies.push(...storeCookies);
-        }
-        return cookies;
-    }
-
-    const containers = await browser.contextualIdentities.query({});
-    const storeIds = containers.map(container => container.cookieStoreId);
-    storeIds.push('firefox-default'); // Include the default store
-
-    const allCookies = await fetchCookies(storeIds);
+    const allCookies = await fetchAllCookies();
 
     // Create metadata
     const metadata = {
         SimpleCookie_version: version,
         User_agent: navigator.userAgent,
         Total_number_of_cookies: allCookies.length,
-        Date_of_export: new Date().toISOString()
-    };
-
-    // Combine metadata and cookies
-    const exportData = {
-        ...metadata,
+        Date_of_export: new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        }),
         cookies: allCookies.map(cookie => ({
-            ...cookie,
-            url: `http${cookie.secure ? 's' : ''}://${cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain}${cookie.path}`
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path,
+            secure: cookie.secure,
+            httpOnly: cookie.httpOnly,
+            expirationDate: cookie.expirationDate,
+            sameSite: cookie.sameSite,
+            storeId: cookie.storeId,
+            firstPartyDomain: cookie.firstPartyDomain,
+            partitionKey: cookie.partitionKey,
+            hostOnly: cookie.hostOnly
         }))
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -140,38 +176,46 @@ document.getElementById('importCookies').addEventListener('click', () => {
 
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const data = JSON.parse(e.target.result);
-            const cookies = data.cookies;
-            for (const cookie of cookies) {
-                const domain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
-                const url = `http${cookie.secure ? 's' : ''}://${domain}${cookie.path}`;
-                const cookieToSet = {
-                    url: url,
-                    name: cookie.name,
-                    value: cookie.value,
-                    path: cookie.path,
-                    secure: cookie.secure,
-                    httpOnly: cookie.httpOnly,
-                    expirationDate: cookie.expirationDate,
-                    sameSite: cookie.sameSite,
-                    storeId: cookie.storeId,
-                    firstPartyDomain: cookie.firstPartyDomain,
-                    partitionKey: cookie.partitionKey
-                };
-                // Only set the domain property if the cookie is not host only
-                if (!cookie.hostOnly) {
-                    cookieToSet.domain = domain;
+            try {
+                const data = JSON.parse(e.target.result);
+                const cookies = data.cookies || [];
+
+                for (const cookie of cookies) {
+                    // Validate the data in case there is a problem with the JSON file
+                    if (!cookie || typeof cookie !== 'object' || !cookie.name || !cookie.domain || !cookie.path) {
+                        continue; 
+                    }
+
+                    const domain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+                    const url = `http${cookie.secure ? 's' : ''}://${domain}${cookie.path}`;
+                    
+                    const cookieToSet = {
+                        url: url,
+                        name: cookie.name,
+                        value: cookie.value,
+                        path: cookie.path,
+                        secure: cookie.secure,
+                        httpOnly: cookie.httpOnly,
+                        expirationDate: cookie.expirationDate,
+                        sameSite: cookie.sameSite,
+                        storeId: cookie.storeId,
+                        firstPartyDomain: cookie.firstPartyDomain,
+                        partitionKey: cookie.partitionKey
+                    };
+
+                    // Set the domain property only if the cookie is not host-only
+                    if (!cookie.hostOnly) {
+                        cookieToSet.domain = domain;
+                    }
+
+                    // Attempt to set the cookie
+                    await browser.cookies.set(cookieToSet);
                 }
-                await browser.cookies.set(cookieToSet);
+            } catch (error) {
+                alert("Whoops!!! 😰 Our cookie jar had a little mishap. Your cookie file might have some crumbs out of place. Could you please ensure it's baked following SimpleCookie factory standards and give it another whirl? Those are the cookies we love best!");
             }
         };
         reader.readAsText(file);
     };
     input.click();
-});
-
-// Append the version to "SimpleCookie v." in the HTML
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('version-text').textContent += version;
-    initializeSettings();
 });
