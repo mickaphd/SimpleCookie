@@ -11,23 +11,18 @@
 
 <h3>Main popup</h3>
 
-<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/b575e2ea-1295-4a32-aabc-8b9039ce8992">
-<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/331a43ce-47f1-4eba-b41b-191058440578">
+<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/3241e18c-01ee-4992-a974-8d820ad482d2">
+<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/1626f4ad-b985-4242-9404-29a5d58a22f1">
 
 <h3>Detailed table</h3>
 
-<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/6c09fa3d-54ed-43d2-b494-58a243c42621">
-<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/837ff4f7-6536-4bd0-aa9d-c8e01a6078b9">
-
-<h3>Dock</h3>
-
-<img width="200" alt="Popup_light" src="https://github.com/user-attachments/assets/99ffe548-8b6e-4e48-916b-38b7472e8c69">
-<img width="200" alt="Popup_dark" src="https://github.com/user-attachments/assets/2e5e7680-4a39-4cde-b8be-8dd44d1a940f">
+<img width="350" alt="Table_light" src="https://github.com/user-attachments/assets/cee9e77e-de8c-4773-8db9-5487a894d4e7">
+<img width="350" alt="Table_dark" src="https://github.com/user-attachments/assets/cd52b5d7-75e5-4683-8c9a-7a25c8bc4128">
 
 <h3>Settings</h3>
 
-<img width="350" alt="Settings_light_extensions-menu" src="https://github.com/user-attachments/assets/b134355a-951b-4512-8802-acc455a79ac3">
-<img width="350" alt="Settings_dark" src="https://github.com/user-attachments/assets/269e2428-987b-46c0-88ae-368eba6c4663">
+<img width="350" alt="Settings_light_extensions-menu" src="https://github.com/user-attachments/assets/31b53b88-0631-4882-ae2f-956acad661aa">
+<img width="350" alt="Settings_dark" src="https://github.com/user-attachments/assets/01096fa4-1e24-4221-b088-4be14cc63219">
 
 <h3>Key features</h3>
 
@@ -43,7 +38,11 @@
 
 1. <b>Safety first:</b> A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered. A confirmation prompt also appears for the Dock shortcuts. An export/import function (JSON format) allows you to backup your cookies. Many footnotes have been added for educational purposes (icons, table headers, settings, etc.).
 
+1. <b>Cookie editor:</b> An option in the settings allows you to create a new cookie from scratch. An edit option is available from the detailed table (in BETA).
+
 1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green) and your favorites. The 'vacuum' icon deletes all cookies stored in Firefox except your favorites. The 'missile target' icon launches the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
+
+1. <b>Tab switcher:</b> Hold Command (macOS) or Alt (PC) to enable the Tab Switcher feature so that a left click on one of the open tabs highlighted in green will switch to it.
 
 1. <b>Tracker database:</b> SimpleCookie uses an internal tracking database derived from Ghostery (https://github.com/ghostery/trackerdb) to identify organizations/websites known to track behavior (ghost icon). While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy.
 
