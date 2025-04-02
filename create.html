@@ -1,0 +1,363 @@
+<!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
+<!-- Made with ❤ by micka from Paris -->
+
+<!DOCTYPE html> 
+<html lang="en"> 
+<head>     
+    <meta charset="UTF-8">     
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create and edit cookies in Firefox with SimpleCookie">
+    <title>SimpleCookie | Create & Edit</title>     
+    <style>         
+        /* CSS Variables for theming */
+        :root {
+            /* Light theme (default) */
+            --primary-color: #05A55D;             
+            --text-color: #333;             
+            --light-gray: #f5f5f5;             
+            --border-color: #e0e0e0;             
+            --success-color: #34A853;             
+            --error-color: #EA4335;
+            --background-color: #FFFFFF;
+            --input-background: #FFFFFF;
+            --input-border: #e0e0e0;
+            --section-background: #FFFFFF;
+            --message-success-bg: #E8F5E9;
+            --message-success-color: #1B5E20;
+            --message-error-bg: #FFEBEE;
+            --message-error-color: #B71C1C;
+            --button-hover: #EE2E91;
+            --icon-opacity: 0.15;
+            --close-button-color: #666;
+            --close-button-hover: rgba(0,0,0,0.05);
+        }
+
+        /* Dark theme */
+        [data-theme="dark"] {
+            --primary-color: #05A55D;
+            --text-color: #FCFCFF;
+            --light-gray: #2A2A35;
+            --border-color: #4D4D57;
+            --success-color: #34A853;
+            --error-color: #F28B82;
+            --background-color: #23222B;
+            --input-background: #33323D;
+            --input-border: #4D4D57;
+            --section-background: #33323D;
+            --message-success-bg: #143A24;
+            --message-success-color: #7AE28C;
+            --message-error-bg: #4C1B1A;
+            --message-error-color: #F5AEA6;
+            --button-hover: #FF5DB1;
+            --icon-opacity: 0.25;
+            --close-button-color: #aaa;
+            --close-button-hover: rgba(255,255,255,0.1);
+        }
+                  
+        body {             
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;             
+            margin: 0;             
+            padding: 0;             
+            color: var(--text-color);             
+            background-color: var(--background-color);             
+            line-height: 1.6;         
+        }                  
+        
+        .container {             
+            max-width: 600px;             
+            margin: 0 auto;             
+            padding: 30px 20px;         
+        }                  
+        
+        h1 {             
+            font-family: 'Poppins', sans-serif;
+            font-size: 25px;             
+            font-weight: 400;             
+            margin-bottom: 25px;             
+            color: var(--primary-color);             
+            padding-bottom: 10px;             
+            position: relative;
+            letter-spacing: -0.5px;
+        }
+                  
+        .header-container {             
+            position: relative;             
+            margin-bottom: 30px;         
+        }                  
+        
+        .background-icon {             
+            position: absolute;             
+            right: 0;             
+            top: 50%;             
+            transform: translateY(-50%);             
+            width: 45px;             
+            height: 45px;             
+            opacity: var(--icon-opacity);             
+            background-image: url('resources/96.png');             
+            background-size: contain;             
+            background-repeat: no-repeat;             
+            background-position: center;         
+        }                  
+        
+        .form-group {             
+            margin-bottom: 18px;             
+            display: flex;             
+            align-items: center;         
+        }                  
+        
+        label {             
+            display: inline-block;             
+            width: 140px;             
+            font-weight: 500;             
+            font-size: 15px;             
+            color: var(--text-color);         
+        }                  
+        
+        input, select {             
+            flex: 1;             
+            padding: 8px 12px;             
+            border: 1px solid var(--border-color);             
+            border-radius: 4px;             
+            font-size: 14px;             
+            color: var(--text-color);             
+            background-color: var(--input-background);             
+            transition: border-color 0.2s, box-shadow 0.2s;         
+        }                  
+        
+        input:focus, select:focus {             
+            outline: none;             
+            border-color: var(--primary-color);             
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);         
+        }                  
+        
+        input::placeholder {             
+            color: #999;         
+        }                  
+        
+        .required label::after {             
+            content: " *";             
+            color: var(--error-color);         
+        }                  
+        
+        button {             
+            background-color: var(--primary-color);             
+            color: white;             
+            border: none;             
+            padding: 10px 20px;             
+            border-radius: 4px;             
+            font-size: 15px;             
+            cursor: pointer;             
+            margin-top: 10px;             
+            transition: background-color 0.2s;         
+        }                  
+        
+        button:hover {             
+            background-color: var(--button-hover);         
+        }                  
+        
+        #messageBox {             
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 25px;
+            border-radius: 4px;
+            display: none;
+            font-size: 14px;
+            z-index: 1000;
+            max-width: 80%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .success-message {
+            background-color: var(--message-success-bg);
+            border-left: 4px solid var(--success-color);
+            color: var(--message-success-color);
+        }
+        
+        .error-message {
+            background-color: var(--message-error-bg);
+            border-left: 4px solid var(--error-color);
+            color: var(--message-error-color);
+        }
+        
+        #closeMessage {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: var(--close-button-color);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        #closeMessage:hover {
+            background-color: var(--close-button-hover);
+        }
+                 
+        .section {             
+            border: 1px solid var(--border-color);             
+            border-radius: 4px;             
+            padding: 15px 20px;             
+            margin-bottom: 35px;
+            margin-top: 15px;
+            position: relative;
+            background-color: var(--section-background);
+        }                  
+        
+        .section-title {             
+            font-size: 15px;             
+            font-weight: 500;             
+            color: var(--primary-color);             
+            position: absolute;             
+            top: -22px;             
+            left: 15px;             
+            background-color: var(--background-color);             
+            padding: 3px 12px;
+            border-radius: 4px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);         
+        }                  
+        
+        .section .form-group:first-of-type {             
+            margin-top: 10px;         
+        }                  
+        
+        .section .form-group:last-of-type {             
+            margin-bottom: 0;         
+        }                  
+        
+        .beta-text {
+            margin-top: 20px;
+            text-align: right;
+            font-size: 12px;
+            color: #777;
+        }
+
+        @media (max-width: 600px) {             
+            .form-group {                 
+                flex-direction: column;                 
+                align-items: flex-start;             
+            }                          
+            
+            label {                 
+                width: 100%;                 
+                margin-bottom: 5px;             
+            }                          
+            
+            input, select {                 
+                width: 100%;             
+            }         
+        }     
+    </style> 
+</head> 
+<body>     
+    <div class="container">         
+        <div class="header-container">             
+            <h1>SimpleCookie | <b>Create & Edit</b></h1>             
+            <div class="background-icon"></div>         
+        </div>                  
+        
+        <div id="messageBox">
+            <span id="messageText"></span>
+            <button id="closeMessage" aria-label="Close message">×</button>
+        </div>
+                  
+        <form id="createCookieForm">             
+            <!-- Basic Cookie Properties -->             
+            <div class="section">                 
+                <div class="section-title">Basic Properties</div>                                  
+                
+                <div class="form-group required">                     
+                    <label for="name" title="If you update a cookie by changing its name, SimpleCookie will most likely create another cookie">Name</label>                     
+                    <input type="text" id="name" required aria-required="true">                 
+                </div>                                  
+                
+                <div class="form-group required">                     
+                    <label for="value" title="Data stored in the cookie (e.g., session token, preferences)">Value</label>                     
+                    <input type="text" id="value" required aria-required="true">                 
+                </div>                                  
+                
+                <div class="form-group required">                     
+                    <label for="domain" title="In Firefox's Cookie API, a domain with a leading dot (`.example.com`) matches the base domain and all its subdomains, while a host without the leading dot (`example.com`) matches only that exact domain">Domain</label>                     
+                    <input type="text" id="domain" required placeholder="example.com" aria-required="true">                 
+                </div>                                  
+                
+                <div class="form-group required">                     
+                    <label for="path" title="URL path where cookie is valid (/ means entire domain)">Path</label>                     
+                    <input type="text" id="path" value="/" required aria-required="true">                 
+                </div>             
+            </div>                          
+            
+            <!-- Security Settings -->             
+            <div class="section">                 
+                <div class="section-title">Security Settings</div>                                  
+                
+                <div class="form-group">                     
+                    <label for="secure" title="If Yes, cookie is only sent over HTTPS connections">Secure</label>                     
+                    <select id="secure">                         
+                        <option value="true">Yes</option>                         
+                        <option value="false">No</option>                     
+                    </select>                
+                </div>                                  
+                
+                <div class="form-group">                     
+                    <label for="httpOnly" title="If Yes, JavaScript cannot access this cookie">HttpOnly</label>                     
+                    <select id="httpOnly">                         
+                        <option value="true">Yes</option>                         
+                        <option value="false">No</option>                     
+                    </select>
+                </div>                                  
+                
+                <div class="form-group">                     
+                    <label for="sameSite" title="Controls cross-site cookie behavior (None: all requests, Lax: limited cross-site, Strict: same-site only)">SameSite</label>                     
+                    <select id="sameSite">                         
+                        <option value="no_restriction">None</option>                         
+                        <option value="lax">Lax</option>                         
+                        <option value="strict">Strict</option>                     
+                    </select>
+                </div>             
+            </div>                          
+            
+            <!-- Advanced Options -->             
+            <div class="section">                 
+                <div class="section-title">Advanced Options</div>                                  
+                
+                <div class="form-group">                     
+                    <label for="partitionKey" title="Site URL for partitioned cookies (CHIPS). Enter with or without 'https://' prefix (e.g., 'google.com' or 'https://google.com')">Partition Key</label>                     
+                    <input type="text" id="partitionKey" placeholder="example.com">                 
+                </div>                                  
+                
+                <div class="form-group">                     
+                    <label for="storeId" title="Firefox container ID (e.g., 'firefox-default' for default container, 'firefox-container-1' for Personal, 'firefox-container-2' for Work, etc.)">Container ID</label>                     
+                    <input type="text" id="storeId" placeholder="firefox-default, firefox-container-1, etc.">                 
+                </div>                                  
+                
+                <div class="form-group">                     
+                    <label for="firstPartyDomain" title="Domain that should be treated as first-party for this cookie">First Party Domain</label>                     
+                    <input type="text" id="firstPartyDomain" placeholder="example.com">                 
+                </div>                                  
+                
+                <div class="form-group">                     
+                    <label for="expirationDate" title="When cookie expires (if blank, becomes a session cookie)">Expires</label>                     
+                    <input type="date" id="expirationDate">                 
+                </div>
+            </div> 
+            <div id="beta-text" class="beta-text">BETA - Proceed with caution ⚠️</div>             
+            <button type="submit">Create Cookie</button>         
+        </form>     
+    </div>          
+    
+    <script src="create.js"></script>
+</body> 
+</html>
