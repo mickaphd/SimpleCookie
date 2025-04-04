@@ -63,12 +63,12 @@ async function fetchAllCookies() {
         // Wait for all promises to resolve and flatten the result
         const allCookies = (await Promise.all(cookiePromises)).flat();
         
-        // More efficient way to filter duplicates
+        // More complete uniqueness check using all relevant properties
         const uniqueMap = new Map();
         
         allCookies.forEach(cookie => {
-            // Create a shorter unique key for each cookie
-            const key = `${cookie.name}|${cookie.domain}|${cookie.path}|${cookie.storeId}|${cookie.partitionKey ? 'p' : 'n'}`;
+            // Create a comprehensive unique key for each cookie
+            const key = `${cookie.name}-${cookie.domain}-${cookie.path}-${cookie.storeId}-${cookie.partitionKey ? JSON.stringify(cookie.partitionKey) : 'null'}-${cookie.value}-${cookie.expirationDate || 'session'}-${cookie.secure}-${cookie.httpOnly}-${cookie.sameSite}`;
             
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, cookie);
@@ -350,7 +350,7 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             element.dataset.index = index;
             element.dataset.domain = website; // Store domain for easier access
             element.textContent = `${website} (${info.count})`;
-            element.title = `Left-click to delete all cookies for '${website}'; right-click for detailed cookie information; press Command on macOS or Alt on PC to use the tab switcher.`;
+            element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
             
             // Create star for the vertical dock
             const star = document.createElement('img');
@@ -507,8 +507,8 @@ function highlightActiveTabDomain() {
 // ==================== TAB SWITCHER ====================
 
 /**
- * Highlights domains of open tabs more prominently when Command/Alt key is pressed
- * @param {boolean} isKeyPressed - Whether the Command/Alt key is pressed
+ * Highlights domains of open tabs more prominently when the platform-specific key is pressed
+ * @param {boolean} isKeyPressed - Whether the modifier key is pressed
  */
 function highlightOpenTabDomains(isKeyPressed) {
     const container = document.getElementById('cookies-container');
@@ -579,6 +579,16 @@ async function navigateToTab(domain) {
     }
     
     return false;
+}
+
+/**
+ * Determines if the platform-specific modifier key is pressed
+ * @param {Event} event - The keyboard event
+ * @returns {boolean} True if the platform-specific modifier key is pressed
+ */
+function isModifierKeyPressed(event) {
+    const isMacOS = navigator.platform.toLowerCase().includes('mac');
+    return isMacOS ? event.metaKey : event.ctrlKey;
 }
 
 
@@ -978,28 +988,43 @@ document.addEventListener('DOMContentLoaded', async function () {
     window.focus();
     await initExtension();
     const cookiesContainer = document.getElementById('cookies-container');
-    if (cookiesContainer) {
-        cookiesContainer.addEventListener('click', async (event) => {
-            if (event.target.nodeName === 'DIV') {
-                const website = event.target.textContent.split(' ')[0];
-                event.preventDefault();
+    
+    let isModifierPressed = false;
+    const isMacOS = navigator.platform.toLowerCase().includes('mac');
+
+    // Event listener for key press
+    document.addEventListener('keydown', (event) => {
+        isModifierPressed = isMacOS ? event.metaKey : event.ctrlKey;
+        if (isModifierPressed) {
+            highlightOpenTabDomains(true);
+        }
+    });
+
+    // Event listener for key release
+    document.addEventListener('keyup', (event) => {
+        if ((isMacOS && !event.metaKey) || (!isMacOS && !event.ctrlKey)) {
+            isModifierPressed = false;
+            highlightOpenTabDomains(false);
+        }
+    });
+
+    // Event listener for the cookie container click events
+    cookiesContainer?.addEventListener('click', async (event) => {
+        if (event.target.nodeName === 'DIV') {
+            const website = event.target.textContent.split(' ')[0];
+            event.preventDefault();
+            
+            // First check if modifier key is currently pressed
+            if (isModifierPressed) {
+                // Get the color to determine if it's an open tab (green)
+                const color = window.getComputedStyle(event.target).color;
+                const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
                 
-                // Check for modifier key
-                const isMacOS = navigator.platform.toLowerCase().includes('mac');
-                const isModifierKeyDown = isMacOS ? event.metaKey : event.altKey;
-                
-                // Check if modifier key is pressed and domain is green (open tab)
-                if (isModifierKeyDown) {
-                    // Get the color to determine if it's an open tab (green)
-                    const color = window.getComputedStyle(event.target).color;
-                    const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
-                    
-                    if (isGreenDomain) {
-                        await navigateToTab(website);
-                        return;
-                    }
-                } 
-                
+                if (isGreenDomain) {
+                    await navigateToTab(website);
+                    return;
+                }
+            } else {
                 // Default behavior - delete cookies
                 const domainCookies = cookies.filter(cookie => 
                     getMainDomain(cookie.domain) === getMainDomain(website)
@@ -1010,33 +1035,22 @@ document.addEventListener('DOMContentLoaded', async function () {
                 await deleteAllCookiesForDomain(website);
                 await updateDisplay();
             }
-        });
-    }
+        }
+    });
+
+    // Event listener for the cookie container right-click: Displays cookie details for the selected domain
+    cookiesContainer?.addEventListener('contextmenu', async (event) => {
+        if (event.target.nodeName === 'DIV') {
+            const website = event.target.textContent.split(' ')[0];
+            event.preventDefault();
+            await displayCookieDetails(website, cookies);
+        }
+    });
+
     const icon1 = document.getElementById('icon1');
     const icon2 = document.getElementById('icon2');
     const icon3 = document.getElementById('icon3');
     const icon5 = document.getElementById('icon5');
-    
-    let isModifierPressed = false;
-
-    // Event listener for key press
-    document.addEventListener('keydown', (event) => {
-        const isMacOS = navigator.platform.toLowerCase().includes('mac');
-        isModifierPressed = isMacOS ? event.metaKey : event.altKey;
-
-        if (isModifierPressed) {
-            highlightOpenTabDomains(true);
-        }
-    });
-
-    // Event listener for key release
-    document.addEventListener('keyup', () => {
-        isModifierPressed = false;
-        highlightOpenTabDomains(false);
-    });
-
-    // Event listener for window resize to reposition stars
-    window.addEventListener('resize', positionStarsInDock);
 
     // Event listener for the icon1 to delete cookies associated with closed tabs
     icon1?.addEventListener('click', async () => {
@@ -1086,51 +1100,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Event listener for the cookie container left-click: Deletes all cookies for the selected domain
-    // or navigates to tab if appropriate modifier key is pressed
-    // Event listener for the cookie container click events
-    cookiesContainer?.addEventListener('click', async (event) => {
-        if (event.target.nodeName === 'DIV') {
-            const website = event.target.textContent.split(' ')[0];
-            event.preventDefault();
-            
-            // Check if modifier key is pressed
-            if (isModifierKeyPressed(event)) {
-                // Get the color to determine if it's an open tab (green)
-                const color = window.getComputedStyle(event.target).color;
-                const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
-                
-                if (isGreenDomain) {
-                    await navigateToTab(website);
-                    return;
-                }
-            } 
-            
-            // Default behavior - delete cookies
-            const domainCookies = cookies.filter(cookie => 
-                getMainDomain(cookie.domain) === getMainDomain(website)
-            );
-            
-            if (domainCookies.length === 0) return;
-            
-            await deleteAllCookiesForDomain(website);
-            await updateDisplay();
-        }
-    });
-
-    // Event listener for the cookie container right-click: Displays cookie details for the selected domain
-    cookiesContainer?.addEventListener('contextmenu', async (event) => {
-        if (event.target.nodeName === 'DIV') {
-            const website = event.target.textContent.split(' ')[0];
-            event.preventDefault();
-            await displayCookieDetails(website, cookies);
-        }
-    });
-
     // Event listener for the icon5 to undo the very last cookie deletion
     icon5?.addEventListener('click', async () => {
         await undoLastDeletion();
     });
+
+    // Event listener for window resize to reposition stars
+    window.addEventListener('resize', positionStarsInDock);
     
     // When popup opens, initialize with default state
     highlightOpenTabDomains(false);
@@ -1140,13 +1116,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 // ==================== HELPER FUNCTIONS ====================
 
 /**
- * Checks if the appropriate modifier key is pressed based on the OS
+ * Checks if the Control key is pressed
  * @param {Event} event - The keyboard event
- * @returns {boolean} True if the modifier key is pressed
+ * @returns {boolean} True if the Control key is pressed
  */
 function isModifierKeyPressed(event) {
-    const isMacOS = navigator.platform.toLowerCase().includes('mac');
-    return isMacOS ? event.metaKey : (event.ctrlKey || event.altKey);
+    return event.ctrlKey;
 }
 
 /**

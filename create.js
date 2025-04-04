@@ -148,6 +148,48 @@ function mapSameSiteValue(value) {
 }
 
 
+// ==================== FIREFOX CONTAINER MANAGEMENT ====================
+
+/**
+ * Fetches available Firefox containers and populates the container dropdown
+ */
+async function populateContainerDropdown() {
+    try {
+        const storeIdSelect = document.getElementById('storeId');
+        if (!storeIdSelect) return;
+        
+        // Add default container option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = 'firefox-default';
+        defaultOption.textContent = 'Default (No Container)';
+        storeIdSelect.innerHTML = ''; // Clear "Loading containers..." message
+        storeIdSelect.appendChild(defaultOption);
+        
+        // Fetch containers from Firefox
+        const containers = await browser.contextualIdentities.query({});
+        
+        // Sort containers alphabetically
+        containers.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Add each container to the dropdown
+        containers.forEach(container => {
+            const option = document.createElement('option');
+            option.value = container.cookieStoreId;
+            option.textContent = container.name;
+            storeIdSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error fetching containers:', error);
+        
+        // In case of error, provide a default option
+        const storeIdSelect = document.getElementById('storeId');
+        if (storeIdSelect) {
+            storeIdSelect.innerHTML = '<option value="firefox-default">Default Container</option>';
+        }
+    }
+}
+
+
 // ==================== FORM HANDLING ====================
 
 /**
@@ -192,8 +234,25 @@ function populateFormFromQueryParams() {
         }
         
         // Set container ID if available
-        if (cookieData.container && cookieData.container !== 'default') {
-            document.getElementById('storeId').value = cookieData.container;
+        if (cookieData.container) {
+            // Wait until containers are loaded
+            setTimeout(() => {
+                const storeIdSelect = document.getElementById('storeId');
+                if (storeIdSelect) {
+                    // Try to find the container by its ID or name
+                    const containerValue = cookieData.container.startsWith('firefox-') ? 
+                        cookieData.container : `firefox-${cookieData.container}`;
+                        
+                    // Find and select the option
+                    for (const option of storeIdSelect.options) {
+                        if (option.value === containerValue || 
+                            option.textContent.toLowerCase() === cookieData.container.toLowerCase()) {
+                            option.selected = true;
+                            break;
+                        }
+                    }
+                }
+            }, 100); // Small delay to ensure dropdown is populated
         }
         
         // Set first party domain if available
@@ -346,9 +405,7 @@ async function createCookie(event) {
         // Add storeId if provided
         const storeId = document.getElementById('storeId')?.value.trim();
         if (storeId && storeId !== 'default') {
-            // Ensure proper storeId format
-            cookieData.storeId = storeId.startsWith('firefox-') ? 
-                storeId : `firefox-${storeId}`;
+            cookieData.storeId = storeId;
         }
         
         // Add firstPartyDomain if provided
@@ -393,8 +450,11 @@ async function createCookie(event) {
 // ==================== INITIALIZATION ====================
 
 // Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Populate container dropdown first
+        await populateContainerDropdown();
+        
         // Add event listener for form submission
         document.getElementById('createCookieForm')?.addEventListener('submit', createCookie);
         
