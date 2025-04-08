@@ -7,7 +7,7 @@
   
 <i>SimpleCookie is the easiest and fastest way to view, learn about, and delete cookies. It also serves as a configurable cleaner. However, remember that cookies and related data are most of the time very useful so please, use this add-on with caution, read the description carefully, and report any bugs or feature requests on GitHub.</i>
 
-<a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/"><img src="https://blog.mozilla.org/addons/files/2020/04/get-the-addon-fx-apr-2020.svg" height=70px></a>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/simplecookie/"><img src="https://blog.mozilla.org/addons/files/2015/11/get-the-addon.png" height=60px></a>
 
 <h3>Main popup</h3>
 
