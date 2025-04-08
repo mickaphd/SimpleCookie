@@ -42,7 +42,7 @@
 
 1. <b>Dock shortcuts:</b> The 'broom' icon deletes all cookies from websites with closed tabs, while retaining cookies from open tabs (highlighted in green) and your favorites. The 'vacuum' icon deletes all cookies stored in Firefox except your favorites. The 'missile target' icon launches the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
 
-1. <b>Tab switcher:</b> Hold Command (macOS) or Alt (PC) to enable the Tab Switcher feature so that a left click on one of the open tabs highlighted in green will switch to it.
+1. <b>Tab switcher:</b> Hold Command (macOS) or Ctrl (PC) to enable the Tab Switcher feature so that a left click on one of the open tabs highlighted in green will switch to it.
 
 1. <b>Tracker database:</b> SimpleCookie uses an internal tracking database derived from Ghostery (https://github.com/ghostery/trackerdb) to identify organizations/websites known to track behavior (ghost icon). While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy.
 
