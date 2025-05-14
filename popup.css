@@ -1,7 +1,6 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
-/* Theme variables - light mode default */
 :root {
     --background-color: #FFF;
     --text-color: #000;
@@ -16,7 +15,6 @@
     --hover-highlight: rgba(0, 0, 0, 0.1);
 }
 
-/* Dark mode variables */
 @media (prefers-color-scheme: dark) {
     :root {
         --background-color: #42414C;
@@ -33,10 +31,8 @@
     }
 }
 
-/* Base styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-    font-size: 13.5px;
     background-color: var(--background-color);
     display: flex;
     flex-direction: column;
@@ -44,7 +40,6 @@ body {
     padding: 0;
 }
 
-/* Layout containers */
 #popup {
     display: flex;
     flex-direction: column;
@@ -55,53 +50,45 @@ body {
 #cookies-container {
     max-height: 500px;
     overflow-y: auto;
-    padding: 3px 5px 4px 30px;
+    padding: 3px 5px 4px 1px;
     flex-grow: 1;
     position: relative;
 }
 
-/* Cookie items */
 .cookie-item {
+    display: flex;
+    align-items: center; 
+    gap: 6px;
     text-align: left;
     color: var(--text-color);
     white-space: nowrap;
-    border-radius: 0 4px 4px 0;
+    border-radius: 4px; 
     position: relative;
     will-change: background-color, transform;
-    margin-left: -30px;
-    padding: 3px 5px 3px 40px;
+    margin-left: 0;
+    padding: 3px 10px;
+    font-size: 13.5px;
+    line-height: 1.3;
     transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .cookie-item:hover {
     background-color: var(--hover-highlight);
     transform: translateX(2px);
-    cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-/* Star dock and icons */
-.star-dock {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 32px;
-    background-color: var(--star-background);
-    border-right: 1px solid var(--dock-border);
-    z-index: 2;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .star-icon {
-    position: absolute;
-    left: 9px;
+    position: static; 
+    margin-right: 2px;
     width: 14px;
     height: 14px;
     cursor: pointer;
-    z-index: 3;
     opacity: 0.1;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-                opacity 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    vertical-align: middle; 
 }
 
 .star-icon:hover {
@@ -114,11 +101,11 @@ body {
     filter: none;
 }
 
-/* Dock styles */
 #dock-wrapper {
-    padding: 4px 0;
-    background-color: var(--dock-background);
-    border-top: 1px solid var(--dock-border);
+    padding: 6px 0;
+    background-color: var(--background-color);
+    border-top: none;
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -131,13 +118,11 @@ body {
     justify-content: center;
     align-items: center;
     text-align: center;
-    width: 100%;
-    padding: 3px 0;
-    position: relative;
-    z-index: 101;
+    margin: 5px 0;
+    width: 100%; 
+    position: sticky;
 }
 
-/* Common transition for interactive elements */
 .interactive-element {
     transition: opacity 0.2s ease, transform 0.2s ease;
     will-change: transform, opacity;
@@ -149,10 +134,10 @@ body {
     margin: 0 6px;
     cursor: pointer;
     opacity: 0.1;
+    transition: opacity 0.1s, transform 0.1s;
     display: flex;
     align-items: center;
-    position: relative;
-    z-index: 102;
+    vertical-align: middle; 
 }
 
 .dock-icon:hover {
@@ -160,13 +145,20 @@ body {
     transform: scale(1.2);
 }
 
-#icon5 {
-    display: inline-flex;
-    color: #FE0179;
-    opacity: 1;
+#icon4 {
+    display: flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
 }
 
-/* Theme-specific icon adjustments */
+#icon5 {
+    display: none;
+    color: #FE0179;
+    opacity: 1;
+    align-items: center !important;
+    vertical-align: middle !important;
+}
+
 @media (prefers-color-scheme: light) {
     .dock-icon {
         filter: invert(0%);
@@ -182,14 +174,12 @@ body {
         filter: none;
     }
     
-    /* Dark mode image adjustments */
     .insight-icon,
     .star-icon[src*="star_empty.svg"] {
         filter: invert(100%);
     }
 }
 
-/* Additional UI elements */
 .insight-icon {
     width: 14px;
     height: 14px;

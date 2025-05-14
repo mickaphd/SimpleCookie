@@ -352,13 +352,13 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             element.textContent = `${website} (${info.count})`;
             element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
             
-            // Create star for the vertical dock
+            // Create star for the inline display
             const star = document.createElement('img');
             star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
             star.alt = 'Favorite Star Icon';
             star.className = 'star-icon';
             star.dataset.website = website;
-            star.dataset.index = index; // Add index for easier positioning
+            star.dataset.index = index;
 
             // Toggle star icon on click
             star.addEventListener('click', (event) => {
@@ -366,8 +366,8 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
                 if (favorites.includes(website)) {
                     star.src = 'resources/star_empty.svg';
                     // Remove from favorites
-                    const index = favorites.indexOf(website);
-                    if (index !== -1) favorites.splice(index, 1);
+                    const idx = favorites.indexOf(website);
+                    if (idx !== -1) favorites.splice(idx, 1);
                 } else {
                     star.src = 'resources/star_full.svg';
                     favorites.push(website);
@@ -375,6 +375,15 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
                 // Save favorites to localStorage
                 localStorage.setItem('favorites', JSON.stringify(favorites));
             });
+
+            // Insert star at the start of the element (before text)
+            element.insertBefore(star, element.firstChild);
+
+            // Append the element to the fragment
+            fragment.appendChild(element);
+
+
+
             
             // Add insight icons if enabled
             if (enableGhostIcon && trackingSites.has(website)) {
@@ -398,10 +407,7 @@ function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIc
             if (isActiveTab) {
                 element.style.color = '#05A55D';
             }
-            
-            // Add elements to fragments
-            fragment.appendChild(element);
-            starsFragment.appendChild(star);
+
         });
     
     // Append all elements at once for better performance
@@ -900,13 +906,14 @@ async function undoLastDeletion() {
         await fetchCookiesAndTabs();
         await updateDisplay();
 
-        // Toggle icon visibility
-        const settingsIcon = document.getElementById('icon4');
+        // Hide only the undo icon
         const undoIcon = document.getElementById('icon5');
-        if (settingsIcon && undoIcon) {
-            settingsIcon.style.display = 'inline-flex';
+        if (undoIcon) {
             undoIcon.style.display = 'none';
         }
+        
+        // Clear the timeout
+        clearTimeout(undoTimeout);
     } catch (error) {
         console.error('Error undoing last deletion:', error);
     }
@@ -1129,17 +1136,18 @@ function isModifierKeyPressed(event) {
  * Temporarily hides the settings icon
  */
 function showUndoIcon() {
-    const settingsIcon = document.getElementById('icon4');
     const undoIcon = document.getElementById('icon5');
     
-    if (!settingsIcon || !undoIcon) return;
+    if (!undoIcon) return;
 
-    settingsIcon.style.display = 'none';
-    undoIcon.style.display = 'inline-flex';
+    // Show the undo icon without hiding the settings icon
+    undoIcon.style.display = 'flex'; 
 
+    // Clear any existing timeout
     clearTimeout(undoTimeout);
+    
+    // Set a new timeout to hide the undo icon after 20 seconds
     undoTimeout = setTimeout(() => {
-        settingsIcon.style.display = 'inline-flex';
         undoIcon.style.display = 'none';
         tempDeletedCookies = [];
     }, 20000); // 20 seconds to undo
