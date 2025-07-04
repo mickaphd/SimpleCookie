@@ -129,7 +129,8 @@ async function applySettings() {
         mycleanerPlugin: false,
         mycleanerLocal: false,
         mycleanerIndexed: false,
-        mycleanerPasswords: false
+        mycleanerPasswords: false,
+        OpenTabsTop: false
     };
 
     try {
@@ -285,137 +286,134 @@ function getCurrentTheme() {
  * @param {boolean} enableSpecialJarIcon - Whether to show container icon
  * @param {boolean} enablePartitionIcon - Whether to show partition icon
  */
-function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
-    // Get container elements
-    const container = document.getElementById('cookies-container');
-    const starDock = document.querySelector('.star-dock');
-    
-    if (!container) return;
-    
-    // Clear containers
-    container.innerHTML = '';
-    if (starDock) starDock.innerHTML = '';
-    
-    // Create document fragment for better performance
-    const fragment = document.createDocumentFragment();
-    const starsFragment = document.createDocumentFragment();
-    
-    // Pre-calculate open tab domains
-    const openTabDomains = tabs.map(({ url }) => {
-        try {
-            const hostname = new URL(url).hostname;
-            return { hostname, mainDomain: getMainDomain(hostname) };
-        } catch (e) {
-            return { hostname: '', mainDomain: '' };
-        }
-    }).filter(domain => domain.mainDomain);
-    
-    // Pre-calculate special domains for better performance
-    const domainInfo = {};
-    
-    // Process cookies in a single pass
-    cookies.forEach(cookie => {
-        const mainDomain = getMainDomain(cookie.domain);
-        
-        // Initialize domain info if first encounter
-        if (!domainInfo[mainDomain]) {
-            domainInfo[mainDomain] = {
-                count: 0,
-                hasNonDefaultContainer: false,
-                hasPartition: false
-            };
-        }
-        
-        // Update count
-        domainInfo[mainDomain].count += 1;
-        
-        // Check for special container
-        if (cookie.storeId !== 'firefox-default') {
-            domainInfo[mainDomain].hasNonDefaultContainer = true;
-        }
-        
-        // Check for partition
-        if (cookie.partitionKey) {
-            domainInfo[mainDomain].hasPartition = true;
-        }
+
+async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
+  // Fetch the "OpenTabsTop" setting to determine sorting behavior
+  const { OpenTabsTop = false } = await browser.storage.local.get('OpenTabsTop');
+
+  const container = document.getElementById('cookies-container');
+  const starDock = document.querySelector('.star-dock');
+  if (!container) return; // Safety check
+
+  // Clear previous content
+  container.innerHTML = '';
+  if (starDock) starDock.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+  const starsFragment = document.createDocumentFragment();
+
+  // Build a Set of main domains from open tabs for quick membership checks
+  const openTabDomainsSet = new Set(tabs.map(({ url }) => {
+    try {
+      return getMainDomain(new URL(url).hostname);
+    } catch {
+      return '';
+    }
+  }).filter(Boolean));
+
+  // Aggregate cookie info by main domain
+  const domainInfo = {};
+  cookies.forEach(cookie => {
+    const mainDomain = getMainDomain(cookie.domain);
+    if (!domainInfo[mainDomain]) {
+      domainInfo[mainDomain] = {
+        count: 0,
+        hasNonDefaultContainer: false,
+        hasPartition: false
+      };
+    }
+    domainInfo[mainDomain].count += 1;
+
+    if (cookie.storeId !== 'firefox-default') {
+      domainInfo[mainDomain].hasNonDefaultContainer = true;
+    }
+    if (cookie.partitionKey) {
+      domainInfo[mainDomain].hasPartition = true;
+    }
+  });
+
+  // Convert domain info object to array for sorting
+  let domainsArray = Object.entries(domainInfo);
+
+  if (OpenTabsTop) {
+    // Separate domains into those with open tabs and others
+    const openTabsDomains = [];
+    const otherDomains = [];
+
+    domainsArray.forEach(([domain, info]) => {
+      if (openTabDomainsSet.has(domain)) {
+        openTabsDomains.push([domain, info]);
+      } else {
+        otherDomains.push([domain, info]);
+      }
     });
-    
-    // Create and append elements
-    Object.entries(domainInfo)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .forEach(([website, info], index) => {
-            // Create domain element
-            const element = document.createElement('div');
-            element.className = 'cookie-item'; 
-            element.dataset.index = index;
-            element.dataset.domain = website; // Store domain for easier access
-            element.textContent = `${website} (${info.count})`;
-            element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
-            
-            // Create star for the inline display
-            const star = document.createElement('img');
-            star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
-            star.alt = 'Favorite Star Icon';
-            star.className = 'star-icon';
-            star.dataset.website = website;
-            star.dataset.index = index;
 
-            // Toggle star icon on click
-            star.addEventListener('click', (event) => {
-                event.stopPropagation();
-                if (favorites.includes(website)) {
-                    star.src = 'resources/star_empty.svg';
-                    // Remove from favorites
-                    const idx = favorites.indexOf(website);
-                    if (idx !== -1) favorites.splice(idx, 1);
-                } else {
-                    star.src = 'resources/star_full.svg';
-                    favorites.push(website);
-                }
-                // Save favorites to localStorage
-                localStorage.setItem('favorites', JSON.stringify(favorites));
-            });
+    // Sort each group alphabetically by domain name
+    openTabsDomains.sort(([a], [b]) => a.localeCompare(b));
+    otherDomains.sort(([a], [b]) => a.localeCompare(b));
 
-            // Insert star at the start of the element (before text)
-            element.insertBefore(star, element.firstChild);
+    // Concatenate open tab domains first, then others
+    domainsArray = [...openTabsDomains, ...otherDomains];
+  } else {
+    // Sort all domains alphabetically if setting is disabled
+    domainsArray.sort(([a], [b]) => a.localeCompare(b));
+  }
 
-            // Append the element to the fragment
-            fragment.appendChild(element);
+  // Create and append DOM elements for each domain entry
+  domainsArray.forEach(([website, info], index) => {
+    const element = document.createElement('div');
+    element.className = 'cookie-item';
+    element.dataset.index = index;
+    element.dataset.domain = website;
+    element.textContent = `${website} (${info.count})`;
+    element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
 
+    // Favorite star icon
+    const star = document.createElement('img');
+    star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
+    star.alt = 'Favorite Star Icon';
+    star.className = 'star-icon';
+    star.dataset.website = website;
+    star.dataset.index = index;
 
+    star.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (favorites.includes(website)) {
+        star.src = 'resources/star_empty.svg';
+        const idx = favorites.indexOf(website);
+        if (idx !== -1) favorites.splice(idx, 1);
+      } else {
+        star.src = 'resources/star_full.svg';
+        favorites.push(website);
+      }
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+    });
 
-            
-            // Add insight icons if enabled
-            if (enableGhostIcon && trackingSites.has(website)) {
-                appendIcon(element, 'resources/insight_ghost.svg', `${website} tracking icon`);
-            }
-            
-            if (enableSpecialJarIcon && info.hasNonDefaultContainer) {
-                appendIcon(element, 'resources/insight_container.svg', `${website} container icon`);
-            }
-            
-            if (enablePartitionIcon && info.hasPartition) {
-                appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
-            }
-            
-            // Check if domain is active in an open tab
-            const isActiveTab = openTabDomains.some(({ mainDomain }) => 
-                isDomainOrSubdomain(mainDomain, getMainDomain(website))
-            );
-            
-            // Apply style for open tabs
-            if (isActiveTab) {
-                element.style.color = '#05A55D';
-            }
+    element.insertBefore(star, element.firstChild);
+    fragment.appendChild(element);
 
-        });
-    
-    // Append all elements at once for better performance
-    container.appendChild(fragment);
-    if (starDock) starDock.appendChild(starsFragment);
-    
-    // Position stars after all elements are added
-    requestAnimationFrame(() => positionStarsInDock());
+    // Append insight icons based on settings and domain info
+    if (enableGhostIcon && trackingSites.has(website)) {
+      appendIcon(element, 'resources/insight_ghost.svg', `${website} tracking icon`);
+    }
+    if (enableSpecialJarIcon && info.hasNonDefaultContainer) {
+      appendIcon(element, 'resources/insight_container.svg', `${website} container icon`);
+    }
+    if (enablePartitionIcon && info.hasPartition) {
+      appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
+    }
+
+    // Highlight domains with open tabs in green color
+    if (openTabDomainsSet.has(website)) {
+      element.style.color = '#05A55D';
+    }
+  });
+
+  container.appendChild(fragment);
+  if (starDock) starDock.appendChild(starsFragment);
+
+  // Position stars aligned with their domain entries after rendering
+  requestAnimationFrame(() => positionStarsInDock());
 }
 
 /**

@@ -70,6 +70,7 @@ const defaultSettings = {
     mycleanerLocal: false,
     mycleanerIndexed: false,
     mycleanerPasswords: false,
+    OpenTabsTop: false,
 };
 
 /**
