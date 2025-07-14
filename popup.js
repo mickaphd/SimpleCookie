@@ -414,7 +414,47 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
 
   // Position stars aligned with their domain entries after rendering
   requestAnimationFrame(() => positionStarsInDock());
+
+  // Add this function here inside displayCookies
+  function highlightActiveTabDomain() {
+    const activeTab = tabs.find(tab => tab.active);
+    if (!activeTab) return;
+
+    try {
+      const activeDomain = getMainDomain(new URL(activeTab.url).hostname);
+      const container = document.getElementById('cookies-container');
+      if (!container) return;
+
+      // Remove any existing active tab icon
+      container.querySelector('.active-tab-icon')?.remove();
+
+      // Find the element for the active domain
+      const activeElement = Array.from(container.childNodes).find(element => {
+        const elementText = element.textContent.trim().split(' ')[0];
+        return elementText && getMainDomain(elementText) === activeDomain;
+      });
+
+      if (activeElement) {
+        const icon = document.createElement('img');
+        icon.src = 'resources/insight_eye.svg';
+        icon.alt = 'Active Tab Icon';
+        icon.className = 'insight-icon active-tab-icon';
+
+        activeElement.appendChild(document.createTextNode(' '));
+        activeElement.appendChild(icon);
+      }
+    } catch (error) {
+      console.error('Error highlighting active tab domain:', error);
+    }
+  }
+
+  // Call it here at the end of displayCookies
+  const settings = await browser.storage.local.get('enableActiveTabHighlight');
+  if (settings.enableActiveTabHighlight) {
+    highlightActiveTabDomain();
+  }
 }
+
 
 /**
  * Helper function to append icon to an element
