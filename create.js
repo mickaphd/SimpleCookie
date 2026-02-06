@@ -1,13 +1,17 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
+// ==================== CONSTANTS ====================
+
+const MESSAGE_DISPLAY_DURATION = 5000; // ms
+const CONTAINER_LOAD_DELAY = 100; // ms
+
 // ==================== THEME MANAGEMENT ====================
 
 /**
- * Detects and applies the appropriate theme based on user preference
+ * Applies the appropriate theme based on system preference
  */
 function applyTheme() {
-    // Check if Firefox's theme is dark
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.setAttribute('data-theme', 'dark');
     } else {
@@ -15,17 +19,13 @@ function applyTheme() {
     }
 }
 
-// Apply theme immediately when script loads
 applyTheme();
-
-// Listen for theme changes
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-
 
 // ==================== UI MESSAGING ====================
 
 /**
- * Shows a message to the user with automatic timeout
+ * Displays a message to the user with automatic timeout
  * @param {string} message - The message to display
  * @param {boolean} isError - Whether this is an error message
  */
@@ -36,45 +36,51 @@ function showMessage(message, isError = false) {
     if (!messageBox || !messageText) return;
     
     messageText.textContent = message;
-    
-    // Remove any existing classes
     messageBox.classList.remove('success-message', 'error-message');
-    
-    // Add appropriate class based on message type
     messageBox.classList.add(isError ? 'error-message' : 'success-message');
-    
     messageBox.style.display = 'block';
     
-    // Auto-hide after 5 seconds
-    setTimeout(function() {
+    setTimeout(() => {
         messageBox.style.display = 'none';
-    }, 5000);
+    }, MESSAGE_DISPLAY_DURATION);
 }
-
 
 // ==================== VALIDATION HELPERS ====================
 
 /**
- * Validates domain format
+ * Month name to number mapping for date parsing
+ */
+const MONTH_MAP = {
+    'jan': '01', 'january': '01',
+    'feb': '02', 'february': '02',
+    'mar': '03', 'march': '03',
+    'apr': '04', 'april': '04',
+    'may': '05',
+    'jun': '06', 'june': '06',
+    'jul': '07', 'july': '07',
+    'aug': '08', 'august': '08',
+    'sep': '09', 'september': '09',
+    'oct': '10', 'october': '10',
+    'nov': '11', 'november': '11',
+    'dec': '12', 'december': '12'
+};
+
+/**
+ * Validates if a domain is in correct format
  * @param {string} domain - Domain to validate
  * @returns {boolean} True if domain is valid
  */
 function isValidDomain(domain) {
     if (!domain) return false;
-    
-    // Allow localhost
     if (domain === 'localhost') return true;
     
-    // Strip leading dot for validation
     const domainToCheck = domain.startsWith('.') ? domain.substring(1) : domain;
-    
-    // Standard domain validation (letters, numbers, hyphens, dots, and at least one dot)
-    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return domainRegex.test(domainToCheck) && domainToCheck.includes('.');
 }
 
 /**
- * Parses expiration date from various formats
+ * Parses expiration date in various formats
  * @param {string} dateString - Date string to parse
  * @returns {string|null} Formatted date string (YYYY-MM-DD) or null
  */
@@ -82,23 +88,18 @@ function parseExpirationDate(dateString) {
     if (!dateString || dateString === 'Session') return null;
     
     try {
-        // Try direct Date parsing first
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
-            // Format as YYYY-MM-DD
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }
         
-        // Match patterns like "DD Mon YYYY" (12 Sep 2025)
-        const dateRegex = /(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/;
+        const dateRegex = /(\\d{1,2})\\s+([A-Za-z]{3,})\\s+(\\d{4})/;
         const match = dateString.match(dateRegex);
         
         if (match) {
             const day = match[1].padStart(2, '0');
-            const month = getMonthNumber(match[2]);
-            const year = match[3];
-            
-            return `${year}-${month}-${day}`;
+            const month = MONTH_MAP[match[2].toLowerCase()] || '01';
+            return `${match[3]}-${month}-${day}`;
         }
     } catch (error) {
         console.error('Date parsing error:', error);
@@ -108,70 +109,35 @@ function parseExpirationDate(dateString) {
 }
 
 /**
- * Converts month name to number
- * @param {string} monthName - Month name (e.g., 'Jan', 'January')
- * @returns {string} Month number as 2-digit string (e.g., '01')
- */
-function getMonthNumber(monthName) {
-    const months = {
-        'jan': '01', 'january': '01',
-        'feb': '02', 'february': '02',
-        'mar': '03', 'march': '03',
-        'apr': '04', 'april': '04',
-        'may': '05',
-        'jun': '06', 'june': '06',
-        'jul': '07', 'july': '07',
-        'aug': '08', 'august': '08',
-        'sep': '09', 'september': '09',
-        'oct': '10', 'october': '10',
-        'nov': '11', 'november': '11',
-        'dec': '12', 'december': '12'
-    };
-    
-    const key = monthName.toLowerCase();
-    return months[key] || '01';
-}
-
-/**
- * Maps SameSite values to browser API values
- * @param {string} value - SameSite value
+ * Maps SameSite attribute values to standard format
+ * @param {string} value - SameSite value to map
  * @returns {string} Mapped SameSite value
  */
 function mapSameSiteValue(value) {
     if (!value) return 'no_restriction';
-    
     const lowerValue = String(value).toLowerCase();
-    
-    if (lowerValue === 'strict') return 'strict';
-    if (lowerValue === 'lax') return 'lax';
-    return 'no_restriction';
+    return (lowerValue === 'strict' || lowerValue === 'lax') ? lowerValue : 'no_restriction';
 }
-
 
 // ==================== FIREFOX CONTAINER MANAGEMENT ====================
 
 /**
- * Fetches available Firefox containers and populates the container dropdown
+ * Populates the container dropdown with available Firefox containers
  */
 async function populateContainerDropdown() {
     try {
         const storeIdSelect = document.getElementById('storeId');
         if (!storeIdSelect) return;
         
-        // Add default container option
         const defaultOption = document.createElement('option');
         defaultOption.value = 'firefox-default';
         defaultOption.textContent = 'Default (No Container)';
-        storeIdSelect.innerHTML = ''; // Clear "Loading containers..." message
+        storeIdSelect.innerHTML = '';
         storeIdSelect.appendChild(defaultOption);
         
-        // Fetch containers from Firefox
         const containers = await browser.contextualIdentities.query({});
-        
-        // Sort containers alphabetically
         containers.sort((a, b) => a.name.localeCompare(b.name));
         
-        // Add each container to the dropdown
         containers.forEach(container => {
             const option = document.createElement('option');
             option.value = container.cookieStoreId;
@@ -180,8 +146,6 @@ async function populateContainerDropdown() {
         });
     } catch (error) {
         console.error('Error fetching containers:', error);
-        
-        // In case of error, provide a default option
         const storeIdSelect = document.getElementById('storeId');
         if (storeIdSelect) {
             storeIdSelect.innerHTML = '<option value="firefox-default">Default Container</option>';
@@ -189,61 +153,40 @@ async function populateContainerDropdown() {
     }
 }
 
-
 // ==================== FORM HANDLING ====================
 
 /**
- * Populates form fields from URL query parameters
+ * Populates the form with data from URL query parameters
  * Used for editing existing cookies
  */
 function populateFormFromQueryParams() {
-    // Check if there are query parameters
     const urlParams = new URLSearchParams(window.location.search);
     const encodedData = urlParams.get('data');
     
-    if (!encodedData) return; // No data to populate
-    
+    if (!encodedData) return;
+
     try {
-        // Decode and parse the JSON data
         const cookieData = JSON.parse(decodeURIComponent(encodedData));
-        
-        // Store original data for reference during updates
         window.originalCookieData = cookieData;
         
-        // Populate the form fields
         document.getElementById('name').value = cookieData.name || '';
         document.getElementById('value').value = cookieData.value || '';
         document.getElementById('domain').value = cookieData.domain || '';
         document.getElementById('path').value = cookieData.path || '/';
+        document.getElementById('secure').value = (cookieData.secure === true || cookieData.secure === 'true') ? 'true' : 'false';
+        document.getElementById('httpOnly').value = (cookieData.httpOnly === true || cookieData.httpOnly === 'true') ? 'true' : 'false';
+        document.getElementById('sameSite').value = mapSameSiteValue(cookieData.sameSite);
         
-        // Set secure dropdown
-        document.getElementById('secure').value = 
-            cookieData.secure === true || cookieData.secure === 'true' ? 'true' : 'false';
-        
-        // Set httpOnly dropdown
-        document.getElementById('httpOnly').value = 
-            cookieData.httpOnly === true || cookieData.httpOnly === 'true' ? 'true' : 'false';
-        
-        // Set sameSite dropdown
-        const sameSiteValue = mapSameSiteValue(cookieData.sameSite);
-        document.getElementById('sameSite').value = sameSiteValue;
-        
-        // Set partition key if available
         if (cookieData.partition) {
             document.getElementById('partitionKey').value = cookieData.partition;
         }
         
-        // Set container ID if available
         if (cookieData.container) {
-            // Wait until containers are loaded
             setTimeout(() => {
                 const storeIdSelect = document.getElementById('storeId');
                 if (storeIdSelect) {
-                    // Try to find the container by its ID or name
                     const containerValue = cookieData.container.startsWith('firefox-') ? 
                         cookieData.container : `firefox-${cookieData.container}`;
-                        
-                    // Find and select the option
                     for (const option of storeIdSelect.options) {
                         if (option.value === containerValue || 
                             option.textContent.toLowerCase() === cookieData.container.toLowerCase()) {
@@ -252,27 +195,23 @@ function populateFormFromQueryParams() {
                         }
                     }
                 }
-            }, 100); // Small delay to ensure dropdown is populated
+            }, CONTAINER_LOAD_DELAY);
         }
         
-        // Set first party domain if available
         if (cookieData.firstPartyDomain) {
             document.getElementById('firstPartyDomain').value = cookieData.firstPartyDomain;
         }
         
-        // Handle expiration date
         const formattedDate = parseExpirationDate(cookieData.expiration);
         if (formattedDate) {
             document.getElementById('expirationDate').value = formattedDate;
         }
         
-        // Change button text to indicate editing
         const submitButton = document.querySelector('button[type="submit"]');
         if (submitButton) {
             submitButton.textContent = 'Update Cookie';
         }
         
-        // Update header to indicate editing
         const header = document.querySelector('h1');
         if (header) {
             header.innerHTML = 'SimpleCookie | <b>Edit Cookie</b>';
@@ -284,97 +223,71 @@ function populateFormFromQueryParams() {
 }
 
 /**
- * Creates or updates a cookie with the provided parameters
+ * Handles the form submission to create or update a cookie
  * @param {Event} event - Form submission event
  */
 async function createCookie(event) {
     event.preventDefault();
     
-    // Check if we're editing an existing cookie
     const isEditing = !!window.originalCookieData;
     
     try {
-        // Get required values
         const name = document.getElementById('name')?.value.trim() || '';
         const value = document.getElementById('value')?.value || '';
         let domain = document.getElementById('domain')?.value.trim() || '';
         const path = document.getElementById('path')?.value.trim() || '/';
         
-        // Basic validation
         if (!name || !domain || !path) {
             throw new Error('Name, domain and path are required fields');
         }
         
-        // Validate domain format
         if (!isValidDomain(domain)) {
             throw new Error('Please enter a valid domain (e.g., example.com or .example.com)');
         }
         
-        // Get cookie attributes
         const secure = document.getElementById('secure')?.value === 'true';
         const httpOnly = document.getElementById('httpOnly')?.value === 'true';
         const sameSite = document.getElementById('sameSite')?.value || 'no_restriction';
         
-        // If editing, first remove the existing cookie
+        // Remove original cookie if editing
         if (isEditing) {
             try {
                 const originalData = window.originalCookieData;
-                
-                // Determine if domain had leading dot in original cookie
                 const domainToUse = originalData.domain || '';
-                
-                // Create URL for removing the cookie - ensure no leading dot in URL
                 const urlDomain = domainToUse.startsWith('.') ? domainToUse.substring(1) : domainToUse;
                 const removalUrl = `http${originalData.secure ? 's' : ''}://${urlDomain}${originalData.path}`;
                 
-                // Basic removal options
                 const removeOptions = {
                     url: removalUrl,
                     name: originalData.name,
+                    domain: domainToUse || undefined,
+                    path: originalData.path || '/',
                 };
                 
-                // Add domain exactly as it was stored
-                if (domainToUse) {
-                    removeOptions.domain = domainToUse;
-                }
-                
-                // Add storeId if present
                 if (originalData.container && originalData.container !== 'default') {
-                    // Handle different formats of container IDs
                     const containerId = originalData.container;
                     removeOptions.storeId = containerId.startsWith('firefox-') ? 
                         containerId : `firefox-${containerId}`;
                 }
                 
-                // Add partitionKey if present
                 if (originalData.partition) {
                     let topLevelSite = originalData.partition;
-                    // Ensure proper URL format
                     if (!topLevelSite.startsWith('http://') && !topLevelSite.startsWith('https://')) {
                         topLevelSite = 'https://' + topLevelSite;
                     }
                     removeOptions.partitionKey = { topLevelSite };
                 }
                 
-                console.log('Removing original cookie with options:', removeOptions);
-                const removed = await browser.cookies.remove(removeOptions);
-                console.log('Cookie removal result:', removed);
-                
-                // If removal failed, show message but continue with creation
-                if (!removed) {
-                    console.warn('Could not find or remove the original cookie. Will attempt to create new cookie anyway.');
-                }
+                await browser.cookies.remove(removeOptions);
             } catch (error) {
-                console.warn('Error removing original cookie:', error);
-                // Continue with cookie creation regardless
+                console.error('Error removing original cookie:', error);
             }
         }
         
-        // Prepare URL for setting the cookie (no leading dot)
+        // Create the cookie
         const urlDomain = domain.startsWith('.') ? domain.substring(1) : domain;
         const url = `http${secure ? 's' : ''}://${urlDomain}${path}`;
         
-        // Build cookie data
         const cookieData = {
             url: url,
             name: name,
@@ -385,14 +298,12 @@ async function createCookie(event) {
             sameSite: sameSite
         };
         
-        // Determine if we should create a host-only cookie or domain cookie
         const wantHostOnly = !domain.startsWith('.');
         if (!wantHostOnly) {
-            // If user explicitly entered domain with leading dot, create a domain cookie
             cookieData.domain = domain;
         }
         
-        // Add partitionKey if provided
+        // Add partition key if specified
         const partitionKey = document.getElementById('partitionKey')?.value.trim();
         if (partitionKey) {
             let topLevelSite = partitionKey;
@@ -402,19 +313,19 @@ async function createCookie(event) {
             cookieData.partitionKey = { topLevelSite };
         }
         
-        // Add storeId if provided
+        // Add store ID if specified
         const storeId = document.getElementById('storeId')?.value.trim();
         if (storeId && storeId !== 'default') {
             cookieData.storeId = storeId;
         }
         
-        // Add firstPartyDomain if provided
+        // Add first party domain if specified
         const firstPartyDomain = document.getElementById('firstPartyDomain')?.value.trim();
         if (firstPartyDomain) {
             cookieData.firstPartyDomain = firstPartyDomain;
         }
         
-        // Handle expiration date
+        // Add expiration date if specified
         const expirationDate = document.getElementById('expirationDate')?.value;
         if (expirationDate) {
             const expirationTimestamp = Math.floor(new Date(expirationDate).getTime() / 1000);
@@ -423,20 +334,15 @@ async function createCookie(event) {
             }
         }
         
-        // Log and create cookie
-        console.log(`${isEditing ? 'Updating' : 'Creating'} cookie with:`, cookieData);
         const result = await browser.cookies.set(cookieData);
-        console.log('Cookie set result:', result);
         
         if (!result) {
             throw new Error('Failed to set cookie. The browser may have rejected it.');
         }
         
-        // Show success message
         const successMessage = isEditing ? 'Cookie updated successfully!' : 'Cookie created successfully!';
         showMessage(successMessage);
         
-        // Only reset the form if creating new cookie (not editing)
         if (!isEditing) {
             document.getElementById('createCookieForm')?.reset();
         }
@@ -446,24 +352,18 @@ async function createCookie(event) {
     }
 }
 
-
 // ==================== INITIALIZATION ====================
 
-// Initialize when page loads
+/**
+ * Initializes the form when DOM is fully loaded
+ */
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Populate container dropdown first
         await populateContainerDropdown();
-        
-        // Add event listener for form submission
         document.getElementById('createCookieForm')?.addEventListener('submit', createCookie);
-        
-        // Add event listener for closing message box
         document.getElementById('closeMessage')?.addEventListener('click', function() {
             document.getElementById('messageBox').style.display = 'none';
         });
-        
-        // Populate form if we're editing a cookie
         populateFormFromQueryParams();
     } catch (error) {
         console.error('Error during form initialization:', error);

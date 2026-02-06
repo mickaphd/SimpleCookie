@@ -1,6 +1,8 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
+/* ==================== CSS VARIABLES & THEMING ==================== */
+
 :root {
     --background-color: #FFF;
     --text-color: #000;
@@ -9,11 +11,13 @@
     --separator-color: #DFDFE4;
     --dock-background: #f5f5f7;
     --dock-border: #e0e0e4;
-    --star-background: #f5f5f7;
     --text-color-rgb: 0, 0, 0;
     --highlight-color-rgb: 223, 223, 228;
     --hover-highlight: rgba(0, 0, 0, 0.1);
+    --primary-green: #05A55D;
 }
+
+/* ==================== DARK THEME ==================== */
 
 @media (prefers-color-scheme: dark) {
     :root {
@@ -24,12 +28,13 @@
         --separator-color: #5F5E68;
         --dock-background: #38373f;
         --dock-border: #4d4c56;
-        --star-background: #38373f;
         --text-color-rgb: 252, 252, 255;
         --highlight-color-rgb: 95, 94, 104;
         --hover-highlight: rgba(255, 255, 255, 0.1);
     }
 }
+
+/* ==================== BASE STYLES ==================== */
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -39,6 +44,8 @@ body {
     margin: 0;
     padding: 0;
 }
+
+/* ==================== POPUP LAYOUT ==================== */
 
 #popup {
     display: flex;
@@ -55,14 +62,16 @@ body {
     position: relative;
 }
 
+/* ==================== COOKIE ITEMS ==================== */
+
 .cookie-item {
     display: flex;
-    align-items: center; 
+    align-items: center;
     gap: 6px;
     text-align: left;
     color: var(--text-color);
     white-space: nowrap;
-    border-radius: 4px; 
+    border-radius: 4px;
     position: relative;
     will-change: background-color, transform;
     margin-left: 0;
@@ -80,15 +89,21 @@ body {
     cursor: pointer;
 }
 
+.cookie-item[style*="color: rgb(5, 165, 93)"] {
+    color: var(--primary-green);
+}
+
+/* ==================== STAR ICONS ==================== */
+
 .star-icon {
-    position: static; 
+    position: static;
     margin-right: 2px;
     width: 14px;
     height: 14px;
     cursor: pointer;
     opacity: 0.1;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
-    vertical-align: middle; 
+    vertical-align: middle;
 }
 
 .star-icon:hover {
@@ -101,10 +116,11 @@ body {
     filter: none;
 }
 
+/* ==================== DOCK & TOOLBAR ==================== */
+
 #dock-wrapper {
     padding: 6px 0;
     background-color: var(--background-color);
-    border-top: none;
     box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
@@ -119,13 +135,8 @@ body {
     align-items: center;
     text-align: center;
     margin: 5px 0;
-    width: 100%; 
+    width: 100%;
     position: sticky;
-}
-
-.interactive-element {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    will-change: transform, opacity;
 }
 
 .dock-icon {
@@ -137,7 +148,7 @@ body {
     transition: opacity 0.1s, transform 0.1s;
     display: flex;
     align-items: center;
-    vertical-align: middle; 
+    vertical-align: middle;
 }
 
 .dock-icon:hover {
@@ -146,17 +157,17 @@ body {
 }
 
 #icon4 {
-    display: flex !important;
-    align-items: center !important;
-    vertical-align: middle !important;
+    display: flex;
+    align-items: center;
+    vertical-align: middle;
 }
 
 #icon5 {
     display: none;
     color: #FE0179;
     opacity: 1;
-    align-items: center !important;
-    vertical-align: middle !important;
+    align-items: center;
+    vertical-align: middle;
 }
 
 @media (prefers-color-scheme: light) {
@@ -169,16 +180,18 @@ body {
     .dock-icon {
         filter: invert(100%);
     }
-    
+
     #icon5 {
         filter: none;
     }
-    
+
     .insight-icon,
     .star-icon[src*="star_empty.svg"] {
         filter: invert(100%);
     }
 }
+
+/* ==================== INSIGHT ICONS & SEPARATOR ==================== */
 
 .insight-icon {
     width: 14px;
@@ -188,13 +201,14 @@ body {
 }
 
 .separator {
-    width: 1px; 
+    width: 1px;
     background-color: var(--separator-color);
-    height: 15px; 
+    height: 15px;
     margin: 0 7px;
 }
 
-/* Modal dialog */
+/* ==================== MODAL & CONFIRMATION ==================== */
+
 .modal {
     display: none;
     position: fixed;
@@ -228,7 +242,8 @@ body {
     transform: scale(1.1);
 }
 
-/* Table styles */
+/* ==================== TABLE STYLES ==================== */
+
 .cookie-table {
     border-collapse: collapse;
     font-size: 12px;
@@ -237,7 +252,8 @@ body {
     width: 100%;
 }
 
-.cell, .header-cell {
+.cell,
+.header-cell {
     padding: 4px;
     border: none;
     text-align: center;
@@ -255,8 +271,7 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Edit column width control */
-.cookie-table th:last-child, 
+.cookie-table th:last-child,
 .cookie-table td:last-child {
     width: 30px;
     min-width: 30px;
@@ -264,18 +279,19 @@ body {
     text-align: center;
 }
 
-/* Dark mode table support */
 @media (prefers-color-scheme: dark) {
     .cookie-table {
         color: white;
     }
+
     .header-cell {
         background-color: var(--dock-background);
         color: white;
     }
 }
 
-/* Cookie counter */
+/* ==================== COUNTER ==================== */
+
 #cookie-counter {
     margin-left: 4px;
     font-size: 16px;

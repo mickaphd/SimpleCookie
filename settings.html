@@ -1,7 +1,7 @@
 <!-- SimpleCookie, a minimalist yet efficient cookie manager for Firefox -->
 <!-- Made with ❤ by micka from Paris -->
 
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,11 +12,11 @@
         /* CSS Variables for theming */
         :root {
             /* Light theme (default) */
-            --primary-color: #05A55D;             
-            --text-color: #333;             
-            --light-gray: #f5f5f5;             
-            --border-color: #e0e0e0;             
-            --success-color: #34A853;             
+            --primary-color: #05A55D;
+            --text-color: #333;
+            --light-gray: #f5f5f5;
+            --border-color: #e0e0e0;
+            --success-color: #34A853;
             --error-color: #EA4335;
             --background-color: #FFFFFF;
             --input-background: #FFFFFF;
@@ -53,74 +53,74 @@
             --close-button-color: #aaa;
             --close-button-hover: rgba(255,255,255,0.1);
         }
-        
-        body {             
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;             
-            margin: 0;             
-            padding: 0;             
-            color: var(--text-color);             
-            background-color: var(--background-color);             
-            line-height: 1.6;         
-        }                  
-        
-        .container {             
-            max-width: 600px;             
-            margin: 0 auto;             
-            padding: 30px 20px;         
-        }                  
-        
-        h1 {             
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        h1 {
             font-family: 'Poppins', sans-serif;
-            font-size: 25px;             
-            font-weight: 400;             
-            margin-bottom: 25px;             
-            color: var(--primary-color);             
-            padding-bottom: 10px;             
+            font-size: 25px;
+            font-weight: 400;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+            padding-bottom: 10px;
             position: relative;
             letter-spacing: -0.5px;
         }
-                  
-        .header-container {             
-            position: relative;             
-            margin-bottom: 30px;         
-        }                  
-        
-        .background-icon {             
-            position: absolute;             
-            right: 0;             
-            top: 50%;             
-            transform: translateY(-50%);             
-            width: 45px;             
-            height: 45px;             
-            opacity: var(--icon-opacity);             
-            background-image: url('resources/96.png');             
-            background-size: contain;             
-            background-repeat: no-repeat;             
-            background-position: center;         
+
+        .header-container {
+            position: relative;
+            margin-bottom: 30px;
         }
-        
-        .section {             
-            border: 1px solid var(--border-color);             
-            border-radius: 4px;             
-            padding: 15px 20px;             
+
+        .background-icon {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 45px;
+            opacity: var(--icon-opacity);
+            background-image: url('resources/96.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .section {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 15px 20px;
             margin-bottom: 35px;
             margin-top: 15px;
             position: relative;
             background-color: var(--section-background);
-        }                  
-        
-        .section-title {             
-            font-size: 15px;             
-            font-weight: 500;             
-            color: var(--primary-color);             
-            position: absolute;             
-            top: -22px;             
-            left: 15px;             
-            background-color: var(--background-color);             
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--primary-color);
+            position: absolute;
+            top: -22px;
+            left: 15px;
+            background-color: var(--background-color);
             padding: 3px 12px;
             border-radius: 4px;
             box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--border-color);         
+            border: 1px solid var(--border-color);
         }
 
         .settings-option {
@@ -188,6 +188,18 @@
             transform: translate(-50%, -50%);
         }
 
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--text-color);
+            background-color: var(--input-background);
+            font-family: monospace;
+            resize: vertical;
+        }
+
         .danger-icon {
             width: 16px !important;
             height: 16px !important;
@@ -198,7 +210,7 @@
             top: -0.5px;
         }
 
-        #messageBox {             
+        #messageBox {
             position: fixed;
             top: 50%;
             left: 50%;
@@ -212,19 +224,19 @@
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        
+
         .success-message {
             background-color: var(--message-success-bg);
             border-left: 4px solid var(--success-color);
             color: var(--message-success-color);
         }
-        
+
         .error-message {
             background-color: var(--message-error-bg);
             border-left: 4px solid var(--error-color);
             color: var(--message-error-color);
         }
-        
+
         #closeMessage {
             position: absolute;
             top: 5px;
@@ -243,7 +255,7 @@
             justify-content: center;
             border-radius: 50%;
         }
-        
+
         #closeMessage:hover {
             background-color: var(--close-button-hover);
         }
@@ -332,6 +344,18 @@
             </div>
         </div>
 
+        <!-- mySniper -->
+        <div class="section">
+            <div class="section-title" title="Configure your 'Most Wanted' list of domains to specifically delete.">mySniper</div>
+            <div class="settings-option">
+                <div class="option-content" title="Add domains such as 'google.com' or '.google.com' to delete cookies from these specific domains. Place a '*' before the domain, like '*google.com', to delete all cookies associated with that domain, regardless of the subdomains. Use a comma to separate multiple domains.">
+                    <img src="resources/icon6.svg" alt="Sniper domains icon">
+                    <span>Domains to snipe</span>
+                </div>
+            </div>
+            <textarea id="sniperDomains" placeholder="google.com, *google.com, facebook.com" title="Add domains such as 'google.com' or '.google.com' to delete cookies from these specific domains. Place a '*' before the domain, like '*google.com', to delete all cookies associated with that domain, regardless of the subdomains. Use a comma to separate multiple domains."></textarea>
+        </div>
+
         <!-- myCleaner -->
         <div class="section">
             <div class="section-title" title="myCleaner is your personalized cleaner shortcut to delete what you want (browsing and download history are enabled by default). Feel free to select or deselect any of the options below.">myCleaner</div>
@@ -411,16 +435,21 @@
         <div class="section">
             <div class="section-title" title="Extra settings for advanced users.">Advanced</div>
 
-
             <div class="settings-option">
                 <div class="option-content" title="Display the open tabs that store cookies (highlighted in green) at the top of the pop-up. Both the open tabs section and the rest of the websites will be sorted alphabetically">
                     <img src="resources/settings_opentabstop.svg" alt="Tabs icon">
                     <span>Open tabs first</span>
                 </div>
-                <input type="checkbox" id="OpenTabsTop" aria-label="Open tabs at the top" />
+                <input type="checkbox" id="OpenTabsTop" aria-label="Open tabs at the top">
             </div>
 
-
+            <div class="settings-option">
+                <div class="option-content" title="Display the number of cookies for the active tab on the addon icon">
+                    <img src="resources/settings_number.svg" alt="Badge number icon">
+                    <span>Show cookie count badge on icon</span>
+                </div>
+                <input type="checkbox" id="showCookieCountBadge" aria-label="Show cookie count badge">
+            </div>
 
             <div class="settings-option">
                 <div class="option-content">
@@ -493,7 +522,7 @@
             <img src="resources/lightning_bolt12.jpeg" alt="Lightning QR code" style="max-width: 220px; height: auto;">
             <p style="margin-top: 2px; font-size: 14px; color: var(--text-color);">azuresync08@phoenixwallet.me</p>
         </div>
-        
+
         <div id="overlay"></div>
         <div id="version-text" class="version-text">SimpleCookie v</div>
     </div>

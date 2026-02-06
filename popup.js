@@ -1,7 +1,7 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
-// ==================== INITIALIZATION OF VARIABLES ====================
+// ==================== VARIABLES ====================
 
 // Set to hold the tracking list
 let trackingSites = new Set();
@@ -16,11 +16,78 @@ let tempDeletedCookies = [];
 // Variable to manage the timeout for the undo action
 let undoTimeout;
 
-// Load favorites from localStorage
-const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+// Global variable to store favorites
+let favorites = [];
+
+// Array to store sniper domains
+let sniperDomains = [];
 
 
-// ==================== FETCHING THE DATA ====================
+// ==================== STORAGE MANAGEMENT ====================
+
+/**
+ * Loads favorites from browser storage
+ * @returns {Promise<Array>} Array of favorite domains
+ */
+async function loadFavorites() {
+    try {
+        const data = await browser.storage.local.get('favorites');
+        favorites = data.favorites || [];
+        return favorites;
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+        favorites = [];
+        return [];
+    }
+}
+
+/**
+ * Saves favorites to browser storage
+ * @param {Array} favList - Array of favorite domains to save
+ * @returns {Promise<void>}
+ */
+async function saveFavorites(favList) {
+    try {
+        await browser.storage.local.set({ favorites: favList });
+        favorites = favList;
+    } catch (error) {
+        console.error('Error saving favorites:', error);
+    }
+}
+
+/**
+ * Loads sniper domains from browser storage
+ * @returns {Promise<Array>} Array of sniper domains
+ */
+async function loadSniperDomains() {
+    try {
+        const data = await browser.storage.local.get('sniperDomains');
+        sniperDomains = data.sniperDomains ? 
+            data.sniperDomains.map(d => d.trim().toLowerCase()).filter(d => d) : [];
+        return sniperDomains;
+    } catch (error) {
+        console.error('Error loading sniper domains:', error);
+        sniperDomains = [];
+        return [];
+    }
+}
+
+/**
+ * Saves sniper domains to browser storage
+ * @param {Array} domains - Array of sniper domains
+ * @returns {Promise<void>}
+ */
+async function saveSniperDomains(domains) {
+    try {
+        await browser.storage.local.set({ sniperDomains: domains });
+        sniperDomains = domains;
+    } catch (error) {
+        console.error('Error saving sniper domains:', error);
+    }
+}
+
+
+// ==================== DATA FETCHING ====================
 
 /**
  * Fetches the list of tracking websites from the local database
@@ -41,7 +108,7 @@ async function fetchTrackerDB() {
 /**
  * Fetches all cookies from all containers and avoids duplicates
  * Retrieves both normal and partitioned cookies
- * @returns {Array} Array of unique cookie objects
+ * @returns {Promise<Array>} Array of unique cookie objects
  */
 async function fetchAllCookies() {
     try {
@@ -108,7 +175,7 @@ async function fetchData() {
 }
 
 
-// ==================== APPLYING THE SETTINGS ====================
+// ==================== SETTINGS MANAGEMENT ====================
 
 /**
  * Applies user settings from storage
@@ -130,7 +197,8 @@ async function applySettings() {
         mycleanerLocal: false,
         mycleanerIndexed: false,
         mycleanerPasswords: false,
-        OpenTabsTop: false
+        OpenTabsTop: false,
+        showCookieCountBadge: true
     };
 
     try {
@@ -164,7 +232,11 @@ async function applySettings() {
  */
 async function initExtension() {
     try {
-        // First, check if any cookies exist
+        // Load favorites and sniper domains first
+        await loadFavorites();
+        await loadSniperDomains();
+        
+        // Then check if any cookies exist
         cookies = await fetchAllCookies();
         
         // If no cookies exist, show message and auto-close
@@ -260,7 +332,7 @@ async function updateDisplay() {
 document.addEventListener('DOMContentLoaded', initExtension);
 
 
-// ==================== DISPLAYING THE DATA ====================
+// ==================== DISPLAY LOGIC ====================
 
 /**
  * Gets the current browser theme (dark or light)
@@ -286,175 +358,140 @@ function getCurrentTheme() {
  * @param {boolean} enableSpecialJarIcon - Whether to show container icon
  * @param {boolean} enablePartitionIcon - Whether to show partition icon
  */
-
 async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
-  // Fetch the "OpenTabsTop" setting to determine sorting behavior
-  const { OpenTabsTop = false } = await browser.storage.local.get('OpenTabsTop');
+    // Fetch the "OpenTabsTop" setting to determine sorting behavior
+    const { OpenTabsTop = false } = await browser.storage.local.get('OpenTabsTop');
 
-  const container = document.getElementById('cookies-container');
-  const starDock = document.querySelector('.star-dock');
-  if (!container) return; // Safety check
+    const container = document.getElementById('cookies-container');
+    const starDock = document.querySelector('.star-dock');
+    if (!container) return; // Safety check
 
-  // Clear previous content
-  container.innerHTML = '';
-  if (starDock) starDock.innerHTML = '';
+    // Clear previous content
+    container.innerHTML = '';
+    if (starDock) starDock.innerHTML = '';
 
-  const fragment = document.createDocumentFragment();
-  const starsFragment = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
+    const starsFragment = document.createDocumentFragment();
 
-  // Build a Set of main domains from open tabs for quick membership checks
-  const openTabDomainsSet = new Set(tabs.map(({ url }) => {
-    try {
-      return getMainDomain(new URL(url).hostname);
-    } catch {
-      return '';
-    }
-  }).filter(Boolean));
+    // Build a Set of main domains from open tabs for quick membership checks
+    const openTabDomainsSet = new Set(tabs.map(({ url }) => {
+        try {
+            return getMainDomain(new URL(url).hostname);
+        } catch {
+            return '';
+        }
+    }).filter(Boolean));
 
-  // Aggregate cookie info by main domain
-  const domainInfo = {};
-  cookies.forEach(cookie => {
-    const mainDomain = getMainDomain(cookie.domain);
-    if (!domainInfo[mainDomain]) {
-      domainInfo[mainDomain] = {
-        count: 0,
-        hasNonDefaultContainer: false,
-        hasPartition: false
-      };
-    }
-    domainInfo[mainDomain].count += 1;
+    // Aggregate cookie info by main domain
+    const domainInfo = {};
+    cookies.forEach(cookie => {
+        const mainDomain = getMainDomain(cookie.domain);
+        if (!domainInfo[mainDomain]) {
+            domainInfo[mainDomain] = {
+                count: 0,
+                hasNonDefaultContainer: false,
+                hasPartition: false
+            };
+        }
+        domainInfo[mainDomain].count += 1;
 
-    if (cookie.storeId !== 'firefox-default') {
-      domainInfo[mainDomain].hasNonDefaultContainer = true;
-    }
-    if (cookie.partitionKey) {
-      domainInfo[mainDomain].hasPartition = true;
-    }
-  });
-
-  // Convert domain info object to array for sorting
-  let domainsArray = Object.entries(domainInfo);
-
-  if (OpenTabsTop) {
-    // Separate domains into those with open tabs and others
-    const openTabsDomains = [];
-    const otherDomains = [];
-
-    domainsArray.forEach(([domain, info]) => {
-      if (openTabDomainsSet.has(domain)) {
-        openTabsDomains.push([domain, info]);
-      } else {
-        otherDomains.push([domain, info]);
-      }
+        if (cookie.storeId !== 'firefox-default') {
+            domainInfo[mainDomain].hasNonDefaultContainer = true;
+        }
+        if (cookie.partitionKey) {
+            domainInfo[mainDomain].hasPartition = true;
+        }
     });
 
-    // Sort each group alphabetically by domain name
-    openTabsDomains.sort(([a], [b]) => a.localeCompare(b));
-    otherDomains.sort(([a], [b]) => a.localeCompare(b));
+    // Convert domain info object to array for sorting
+    let domainsArray = Object.entries(domainInfo);
 
-    // Concatenate open tab domains first, then others
-    domainsArray = [...openTabsDomains, ...otherDomains];
-  } else {
-    // Sort all domains alphabetically if setting is disabled
-    domainsArray.sort(([a], [b]) => a.localeCompare(b));
-  }
+    if (OpenTabsTop) {
+        // Separate domains into those with open tabs and others
+        const openTabsDomains = [];
+        const otherDomains = [];
 
-  // Create and append DOM elements for each domain entry
-  domainsArray.forEach(([website, info], index) => {
-    const element = document.createElement('div');
-    element.className = 'cookie-item';
-    element.dataset.index = index;
-    element.dataset.domain = website;
-    element.textContent = `${website} (${info.count})`;
-    element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
+        domainsArray.forEach(([domain, info]) => {
+            if (openTabDomainsSet.has(domain)) {
+                openTabsDomains.push([domain, info]);
+            } else {
+                otherDomains.push([domain, info]);
+            }
+        });
 
-    // Favorite star icon
-    const star = document.createElement('img');
-    star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
-    star.alt = 'Favorite Star Icon';
-    star.className = 'star-icon';
-    star.dataset.website = website;
-    star.dataset.index = index;
+        // Sort each group alphabetically by domain name
+        openTabsDomains.sort(([a], [b]) => a.localeCompare(b));
+        otherDomains.sort(([a], [b]) => a.localeCompare(b));
 
-    star.addEventListener('click', (event) => {
-      event.stopPropagation();
-      if (favorites.includes(website)) {
-        star.src = 'resources/star_empty.svg';
-        const idx = favorites.indexOf(website);
-        if (idx !== -1) favorites.splice(idx, 1);
-      } else {
-        star.src = 'resources/star_full.svg';
-        favorites.push(website);
-      }
-      localStorage.setItem('favorites', JSON.stringify(favorites));
+        // Concatenate open tab domains first, then others
+        domainsArray = [...openTabsDomains, ...otherDomains];
+    } else {
+        // Sort all domains alphabetically if setting is disabled
+        domainsArray.sort(([a], [b]) => a.localeCompare(b));
+    }
+
+    // Create and append DOM elements for each domain entry
+    domainsArray.forEach(([website, info], index) => {
+        const element = document.createElement('div');
+        element.className = 'cookie-item';
+        element.dataset.index = index;
+        element.dataset.domain = website;
+        element.textContent = `${website} (${info.count})`;
+        element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
+
+        // Favorite star icon
+        const star = document.createElement('img');
+        star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
+        star.alt = 'Favorite Star Icon';
+        star.className = 'star-icon';
+        star.dataset.website = website;
+        star.dataset.index = index;
+
+        star.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (favorites.includes(website)) {
+                star.src = 'resources/star_empty.svg';
+                const idx = favorites.indexOf(website);
+                if (idx !== -1) favorites.splice(idx, 1);
+            } else {
+                star.src = 'resources/star_full.svg';
+                favorites.push(website);
+            }
+            saveFavorites(favorites);
+        });
+
+        element.insertBefore(star, element.firstChild);
+        fragment.appendChild(element);
+
+        // Append insight icons based on settings and domain info
+        if (enableGhostIcon && trackingSites.has(website)) {
+            appendIcon(element, 'resources/insight_ghost.svg', `${website} tracking icon`);
+        }
+        if (enableSpecialJarIcon && info.hasNonDefaultContainer) {
+            appendIcon(element, 'resources/insight_container.svg', `${website} container icon`);
+        }
+        if (enablePartitionIcon && info.hasPartition) {
+            appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
+        }
+
+        // Highlight domains with open tabs in green color
+        if (openTabDomainsSet.has(website)) {
+            element.style.color = '#05A55D';
+        }
     });
 
-    element.insertBefore(star, element.firstChild);
-    fragment.appendChild(element);
+    container.appendChild(fragment);
+    if (starDock) starDock.appendChild(starsFragment);
 
-    // Append insight icons based on settings and domain info
-    if (enableGhostIcon && trackingSites.has(website)) {
-      appendIcon(element, 'resources/insight_ghost.svg', `${website} tracking icon`);
+    // Position stars aligned with their domain entries after rendering
+    requestAnimationFrame(() => positionStarsInDock());
+
+    // Call highlightActiveTabDomain at the end of displayCookies
+    const settings = await browser.storage.local.get('enableActiveTabHighlight');
+    if (settings.enableActiveTabHighlight) {
+        highlightActiveTabDomain();
     }
-    if (enableSpecialJarIcon && info.hasNonDefaultContainer) {
-      appendIcon(element, 'resources/insight_container.svg', `${website} container icon`);
-    }
-    if (enablePartitionIcon && info.hasPartition) {
-      appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
-    }
-
-    // Highlight domains with open tabs in green color
-    if (openTabDomainsSet.has(website)) {
-      element.style.color = '#05A55D';
-    }
-  });
-
-  container.appendChild(fragment);
-  if (starDock) starDock.appendChild(starsFragment);
-
-  // Position stars aligned with their domain entries after rendering
-  requestAnimationFrame(() => positionStarsInDock());
-
-  // Add this function here inside displayCookies
-  function highlightActiveTabDomain() {
-    const activeTab = tabs.find(tab => tab.active);
-    if (!activeTab) return;
-
-    try {
-      const activeDomain = getMainDomain(new URL(activeTab.url).hostname);
-      const container = document.getElementById('cookies-container');
-      if (!container) return;
-
-      // Remove any existing active tab icon
-      container.querySelector('.active-tab-icon')?.remove();
-
-      // Find the element for the active domain
-      const activeElement = Array.from(container.childNodes).find(element => {
-        const elementText = element.textContent.trim().split(' ')[0];
-        return elementText && getMainDomain(elementText) === activeDomain;
-      });
-
-      if (activeElement) {
-        const icon = document.createElement('img');
-        icon.src = 'resources/insight_eye.svg';
-        icon.alt = 'Active Tab Icon';
-        icon.className = 'insight-icon active-tab-icon';
-
-        activeElement.appendChild(document.createTextNode(' '));
-        activeElement.appendChild(icon);
-      }
-    } catch (error) {
-      console.error('Error highlighting active tab domain:', error);
-    }
-  }
-
-  // Call it here at the end of displayCookies
-  const settings = await browser.storage.local.get('enableActiveTabHighlight');
-  if (settings.enableActiveTabHighlight) {
-    highlightActiveTabDomain();
-  }
 }
-
 
 /**
  * Helper function to append icon to an element
@@ -492,24 +529,6 @@ function positionStarsInDock() {
             stars[index].style.top = `${top}px`;
         }
     });
-}
-
-/**
- * Adds an icon to an element if condition is met
- * @param {HTMLElement} element - The element to add the icon to
- * @param {string} domain - The domain name
- * @param {string} iconSrc - The icon source URL
- * @param {boolean} condition - Whether to add the icon
- */
-function updateIcon(element, domain, iconSrc, condition) {
-    if (condition) {
-        const icon = document.createElement('img');
-        icon.src = iconSrc;
-        icon.alt = `${domain} icon`;
-        icon.className = 'insight-icon';
-        element.appendChild(document.createTextNode(' '));
-        element.appendChild(icon);
-    }
 }
 
 /**
@@ -788,7 +807,7 @@ function displayCookieDetails(mainDomain, cookies) {
                 secure: cookie.secure,
                 storeId: cookie.storeId,
                 partitionKey: cookie.partitionKey
-            }, `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`);
+            });
             row.remove();
             showUndoIcon(); // Show undo option after deletion
         });
@@ -809,12 +828,12 @@ function displayCookieDetails(mainDomain, cookies) {
 }
 
 
-// ==================== DELETION OF COOKIES ====================
+// ==================== COOKIE DELETION ====================
 
 /**
  * Deletes a cookie based on its properties
  * @param {Object} cookie - Cookie object with properties needed for deletion
- * @returns {Promise} Promise that resolves when the cookie is deleted
+ * @returns {Promise<void>}
  */
 async function deleteCookie(cookie) {
     const isFavorite = favorites.includes(getMainDomain(cookie.domain));
@@ -850,11 +869,15 @@ async function deleteCookie(cookie) {
 /**
  * Deletes cookies based on a filter function
  * @param {Function} filterFn - Function that returns true for cookies to delete
- * @returns {Promise} Promise that resolves when all cookies are deleted
+ * @returns {Promise<void>}
  */
 async function deleteCookies(filterFn) {
-    const cookiesToDelete = cookies.filter(filterFn);
-    await Promise.all(cookiesToDelete.map(deleteCookie));
+    try {
+        const cookiesToDelete = cookies.filter(filterFn);
+        await Promise.all(cookiesToDelete.map(deleteCookie));
+    } catch (error) {
+        console.error('Error deleting multiple cookies:', error);
+    }
 }
 
 /**
@@ -915,6 +938,59 @@ async function deleteCookiesFromClosedTabs(closedTabsCookies) {
         }
     } catch (error) {
         console.error('Error deleting cookies from closed tabs:', error);
+    }
+}
+
+/**
+ * Deletes cookies matching sniper domain list (exact or wildcard)
+ * Exact: "google.com" only matches google.com
+ * Wildcard: "*google.com" matches any subdomain of google.com
+ * Respects favorite domains
+ */
+async function mySniper() {
+    if (sniperDomains.length === 0) return;
+    
+    try {
+        const favoriteDomains = new Set(favorites.map(getMainDomain));
+        
+        // For each sniper domain, delete matching cookies
+        for (const sniperDomain of sniperDomains) {
+            const isWildcard = sniperDomain.startsWith('*');
+            const cleanDomain = isWildcard ? sniperDomain.substring(1) : sniperDomain;
+            
+            const cookiesToDelete = cookies.filter(cookie => {
+                const mainDomain = getMainDomain(cookie.domain);
+                // Skip if domain is in favorites
+                if (favoriteDomains.has(mainDomain)) return false;
+                
+                if (isWildcard) {
+                    // Wildcard: match cleanDomain and all subdomains
+                    return cookie.domain === cleanDomain || 
+                           cookie.domain === '.' + cleanDomain ||
+                           cookie.domain.endsWith('.' + cleanDomain);
+                } else {
+                    // Exact: match cleanDomain only
+                    return cookie.domain === cleanDomain || 
+                           cookie.domain === '.' + cleanDomain;
+                }
+            });
+            
+            for (const cookie of cookiesToDelete) {
+                await deleteCookie(cookie);
+            }
+        }
+        
+        // Fetch cookies again to update display
+        cookies = await fetchAllCookies();
+        
+        if (cookies.length === 0) {
+            showNoCoookiesMessage();
+            return;
+        }
+        
+        await updateDisplay();
+    } catch (error) {
+        console.error('Error running mySniper:', error);
     }
 }
 
@@ -1030,155 +1106,194 @@ async function myCleaner() {
 // ==================== EVENT LISTENERS ====================
 
 document.addEventListener('DOMContentLoaded', async function () {
-    window.focus();
-    await initExtension();
-    const cookiesContainer = document.getElementById('cookies-container');
-    
-    let isModifierPressed = false;
-    const isMacOS = navigator.platform.toLowerCase().includes('mac');
+    try {
+        window.focus();
+        // Refresh badge when popup opens
+        await browser.runtime.sendMessage({ 
+            action: 'updateBadge' 
+        }).catch(() => {
+            // Ignore errors if background script is not ready
+        });
+        
+        await initExtension();
+        const cookiesContainer = document.getElementById('cookies-container');
+        
+        let isModifierPressed = false;
+        const isMacOS = navigator.platform.toLowerCase().includes('mac');
 
-    // Event listener for key press
-    document.addEventListener('keydown', (event) => {
-        isModifierPressed = isMacOS ? event.metaKey : event.ctrlKey;
-        if (isModifierPressed) {
-            highlightOpenTabDomains(true);
-        }
-    });
-
-    // Event listener for key release
-    document.addEventListener('keyup', (event) => {
-        if ((isMacOS && !event.metaKey) || (!isMacOS && !event.ctrlKey)) {
-            isModifierPressed = false;
-            highlightOpenTabDomains(false);
-        }
-    });
-
-    // Event listener for the cookie container click events
-    cookiesContainer?.addEventListener('click', async (event) => {
-        if (event.target.nodeName === 'DIV') {
-            const website = event.target.textContent.split(' ')[0];
-            event.preventDefault();
-            
-            // First check if modifier key is currently pressed
+        // Event listener for key press
+        document.addEventListener('keydown', (event) => {
+            isModifierPressed = isMacOS ? event.metaKey : event.ctrlKey;
             if (isModifierPressed) {
-                // Get the color to determine if it's an open tab (green)
-                const color = window.getComputedStyle(event.target).color;
-                const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
+                highlightOpenTabDomains(true);
+            }
+        });
+
+        // Event listener for key release
+        document.addEventListener('keyup', (event) => {
+            if ((isMacOS && !event.metaKey) || (!isMacOS && !event.ctrlKey)) {
+                isModifierPressed = false;
+                highlightOpenTabDomains(false);
+            }
+        });
+
+        // Event listener for the cookie container click events
+        cookiesContainer?.addEventListener('click', async (event) => {
+            if (event.target.nodeName === 'DIV') {
+                const website = event.target.textContent.split(' ')[0];
+                event.preventDefault();
                 
-                if (isGreenDomain) {
-                    await navigateToTab(website);
+                // First check if modifier key is currently pressed
+                if (isModifierPressed) {
+                    // Get the color to determine if it's an open tab (green)
+                    const color = window.getComputedStyle(event.target).color;
+                    const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
+                    
+                    if (isGreenDomain) {
+                        await navigateToTab(website);
+                        return;
+                    }
+                } else {
+                    // Default behavior - delete cookies
+                    const domainCookies = cookies.filter(cookie => 
+                        getMainDomain(cookie.domain) === getMainDomain(website)
+                    );
+                    
+                    if (domainCookies.length === 0) return;
+                    
+                    await deleteAllCookiesForDomain(website);
+                    await updateDisplay();
+                }
+            }
+        });
+
+        // Event listener for the cookie container right-click: Displays cookie details for the selected domain
+        cookiesContainer?.addEventListener('contextmenu', async (event) => {
+            if (event.target.nodeName === 'DIV') {
+                const website = event.target.textContent.split(' ')[0];
+                event.preventDefault();
+                await displayCookieDetails(website, cookies);
+            }
+        });
+
+        const icon1 = document.getElementById('icon1');
+        const icon6 = document.getElementById('icon6');
+        const icon2 = document.getElementById('icon2');
+        const icon3 = document.getElementById('icon3');
+        const icon5 = document.getElementById('icon5');
+
+        // Event listener for the icon1 to delete cookies associated with closed tabs
+        icon1?.addEventListener('click', async () => {
+            try {
+                if (!hasCookiesToDelete()) return;
+                const userConfirmed = await showConfirmationModal(cookies);
+                if (userConfirmed) {
+                    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+                    const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
+                    await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
+                    await updateDisplay();
+                }
+            } catch (error) {
+                console.error('Error in icon1 click handler:', error);
+            }
+        });
+
+        // Event listener for the icon6 to trigger mySniper
+        icon6?.addEventListener('click', async () => {
+            try {
+                // Reload sniper domains from storage before checking
+                await loadSniperDomains();
+                
+                if (sniperDomains.length === 0) {
+                    // No sniper domains configured
                     return;
                 }
-            } else {
-                // Default behavior - delete cookies
-                const domainCookies = cookies.filter(cookie => 
-                    getMainDomain(cookie.domain) === getMainDomain(website)
-                );
-                
-                if (domainCookies.length === 0) return;
-                
-                await deleteAllCookiesForDomain(website);
-                await updateDisplay();
+                if (!hasCookiesToDelete()) return;
+                const userConfirmed = await showConfirmationModal(cookies);
+                if (userConfirmed) {
+                    await mySniper();
+                    await updateDisplay();
+                }
+            } catch (error) {
+                console.error('Error in icon6 click handler:', error);
             }
-        }
-    });
+        });
 
-    // Event listener for the cookie container right-click: Displays cookie details for the selected domain
-    cookiesContainer?.addEventListener('contextmenu', async (event) => {
-        if (event.target.nodeName === 'DIV') {
-            const website = event.target.textContent.split(' ')[0];
-            event.preventDefault();
-            await displayCookieDetails(website, cookies);
-        }
-    });
-
-    const icon1 = document.getElementById('icon1');
-    const icon2 = document.getElementById('icon2');
-    const icon3 = document.getElementById('icon3');
-    const icon5 = document.getElementById('icon5');
-
-    // Event listener for the icon1 to delete cookies associated with closed tabs
-    icon1?.addEventListener('click', async () => {
-        if (!hasCookiesToDelete()) return;
-        const userConfirmed = await showConfirmationModal(cookies);
-        if (userConfirmed) {
-            const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-            const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-            await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
-            await updateDisplay();
-        }
-    });
-
-    // Event listener for the icon2 to delete all cookies except favorites
-    icon2?.addEventListener('click', async () => {
-        if (!hasCookiesToDelete()) return;
-        const userConfirmed = await showConfirmationModal(cookies);
-        if (userConfirmed) {
-            const favoriteDomains = new Set(favorites.map(getMainDomain));
-            const cookiesToDelete = cookies.filter(cookie => 
-                !favoriteDomains.has(getMainDomain(cookie.domain))
-            );
-            
-            if (cookiesToDelete.length > 0) {
-                await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
+        // Event listener for the icon2 to delete all cookies except favorites
+        icon2?.addEventListener('click', async () => {
+            try {
+                if (!hasCookiesToDelete()) return;
+                const userConfirmed = await showConfirmationModal(cookies);
+                if (userConfirmed) {
+                    const favoriteDomains = new Set(favorites.map(getMainDomain));
+                    const cookiesToDelete = cookies.filter(cookie => 
+                        !favoriteDomains.has(getMainDomain(cookie.domain))
+                    );
+                    
+                    if (cookiesToDelete.length > 0) {
+                        await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
+                    }
+                    
+                    // Fetch cookies again to check if we've removed everything
+                    cookies = await fetchAllCookies();
+                    
+                    if (cookies.length === 0) {
+                        showNoCoookiesMessage();
+                        return;
+                    }
+                    
+                    await updateDisplay();
+                }
+            } catch (error) {
+                console.error('Error in icon2 click handler:', error);
             }
-            
-            // Fetch cookies again to check if we've removed everything
-            cookies = await fetchAllCookies();
-            
-            if (cookies.length === 0) {
-                showNoCoookiesMessage();
-                return;
+        });
+
+        // Event listener for the icon3 to trigger the myCleaner function
+        icon3?.addEventListener('click', async () => {
+            try {
+                if (!hasCookiesToDelete()) return;
+                const userConfirmed = await showConfirmationModal(cookies);
+                if (userConfirmed) {
+                    await myCleaner();
+                    await updateDisplay();
+                }
+            } catch (error) {
+                console.error('Error in icon3 click handler:', error);
             }
-            
-            await updateDisplay();
-        }
-    });
+        });
 
-    // Event listener for the icon3 to trigger the myCleaner function
-    icon3?.addEventListener('click', async () => {
-        if (!hasCookiesToDelete()) return;
-        const userConfirmed = await showConfirmationModal(cookies);
-        if (userConfirmed) {
-            await myCleaner();
-            await updateDisplay();
-        }
-    });
+        // Event listener for the icon5 to undo the very last cookie deletion
+        icon5?.addEventListener('click', async () => {
+            try {
+                await undoLastDeletion();
+            } catch (error) {
+                console.error('Error in icon5 click handler:', error);
+            }
+        });
 
-    // Event listener for the icon5 to undo the very last cookie deletion
-    icon5?.addEventListener('click', async () => {
-        await undoLastDeletion();
-    });
-
-    // Event listener for window resize to reposition stars
-    window.addEventListener('resize', positionStarsInDock);
-    
-    // When popup opens, initialize with default state
-    highlightOpenTabDomains(false);
+        // Event listener for window resize to reposition stars
+        window.addEventListener('resize', positionStarsInDock);
+        
+        // When popup opens, initialize with default state
+        highlightOpenTabDomains(false);
+    } catch (error) {
+        console.error('Error in DOMContentLoaded handler:', error);
+    }
 });
 
 
 // ==================== HELPER FUNCTIONS ====================
 
 /**
- * Checks if the Control key is pressed
- * @param {Event} event - The keyboard event
- * @returns {boolean} True if the Control key is pressed
- */
-function isModifierKeyPressed(event) {
-    return event.ctrlKey;
-}
-
-/**
  * Shows the undo icon and sets a timeout to hide it
- * Temporarily hides the settings icon
  */
 function showUndoIcon() {
     const undoIcon = document.getElementById('icon5');
     
     if (!undoIcon) return;
 
-    // Show the undo icon without hiding the settings icon
+    // Show the undo icon
     undoIcon.style.display = 'flex'; 
 
     // Clear any existing timeout

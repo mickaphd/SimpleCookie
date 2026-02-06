@@ -9,11 +9,11 @@
     <meta name="description" content="A minimalist yet efficient cookie manager for Firefox">
     <title>SimpleCookie</title>
     <link rel="preload" href="resources/icon1.svg" as="image">
+    <link rel="preload" href="resources/icon6.svg" as="image">
     <link rel="preload" href="resources/icon2.svg" as="image">
     <link rel="preload" href="resources/icon3.svg" as="image">
     <link rel="preload" href="resources/icon4.svg" as="image">
     <link rel="preload" href="resources/icon5.svg" as="image">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
     <link rel="stylesheet" href="popup.css">
     <script defer src="popup.js"></script>
 </head>
@@ -23,13 +23,14 @@
         <div id="dock-wrapper">
             <div id="dock">
                 <img class="dock-icon" id="icon1" src="resources/icon1.svg" title="⚠️ Delete cookies from closed tabs, keeping only those associated with open tabs (whose domains are written in green). Favorite cookies will not be deleted." aria-label="Delete cookies from closed tabs"/>
+                <img class="dock-icon" id="icon6" src="resources/icon6.svg" title="⚠️ mySniper → Delete cookies from domains you've configured in the settings. Favorite cookies will not be deleted." aria-label="mySniper - Delete configured domains"/>
                 <img class="dock-icon" id="icon2" src="resources/icon2.svg" title="⚠️ ⚠️ Delete all cookies stored by Firefox. Favorite cookies will not be deleted." aria-label="Delete all cookies"/>
-                <img class="dock-icon" id="icon3" src="resources/icon3.svg" title="⚠️ ⚠️ ⚠️ myCleaner → Delete your selection of browsing data that you can select in the settings. Note that selecting 'Cookies' in the myCleaner settings will bypass the favorites protection and delete all cookies without exception." aria-label="My Cleaner"/>
+                <img class="dock-icon" id="icon3" src="resources/icon3.svg" title="⚠️ ⚠️ ⚠️ myCleaner → Delete your selection of browsing data that you can select in the settings. Note that selecting 'Cookies' in the myCleaner settings will bypass the favorites protection and delete all cookies WITHOUT exception." aria-label="My Cleaner"/>
                 <div class="separator"></div>
                 <a href="settings.html" target="_blank" title="Open the settings." aria-label="Access the configuration settings">
                     <img class="dock-icon" id="icon4" src="resources/icon4.svg" title="Open the settings."/>
                 </a>
-                <img class="dock-icon" id="icon5" src="resources/icon5.svg" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery. Expired cookies cannot be restored." aria-label="Undo the last cookie deletion" style="display:none;"/>
+                <img class="dock-icon" id="icon5" src="resources/icon5.svg" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery. Expired cookies cannot be restored." aria-label="Undo the last cookie deletion"/>
                 <span id="cookie-counter" class="dock-icon" title="Total number of cookies."></span>
             </div>
         </div>

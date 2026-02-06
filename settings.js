@@ -22,7 +22,7 @@ applyTheme();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
 
-// ==================== UI HELPERS ====================
+// ==================== UI MESSAGING ====================
 
 /**
  * Shows a message to the user with automatic timeout
@@ -71,6 +71,7 @@ const defaultSettings = {
     mycleanerIndexed: false,
     mycleanerPasswords: false,
     OpenTabsTop: false,
+    showCookieCountBadge: true
 };
 
 /**
@@ -103,7 +104,7 @@ async function initializeSettings() {
         
         Object.keys(settings).forEach(key => {
             const element = document.getElementById(key);
-            if (element) {
+            if (element && element.type === 'checkbox') {
                 element.checked = settings[key];
                 element.addEventListener('change', async function() {
                     const isChecked = this.checked;
@@ -112,6 +113,25 @@ async function initializeSettings() {
                 });
             }
         });
+
+        // Handle sniper domains textarea separately
+        const sniperDomainsElement = document.getElementById('sniperDomains');
+        if (sniperDomainsElement) {
+            try {
+                const sniperData = await browser.storage.local.get('sniperDomains');
+                sniperDomainsElement.value = sniperData.sniperDomains ? 
+                    sniperData.sniperDomains.join(', ') : '';
+                
+                sniperDomainsElement.addEventListener('change', async function() {
+                    const domains = this.value.split(',')
+                        .map(d => d.trim().toLowerCase())
+                        .filter(d => d);
+                    await browser.storage.local.set({ sniperDomains: domains });
+                });
+            } catch (error) {
+                console.error('Error handling sniper domains:', error);
+            }
+        }
     } catch (error) {
         console.error('Error initializing settings:', error);
         showMessage('Failed to load settings', true);
@@ -300,7 +320,6 @@ async function importCookies() {
 async function resetSettingsAndFavorites() {
     try {
         await browser.storage.local.clear();
-        localStorage.removeItem('favorites');
         showMessage('Settings and favorites have been reset successfully!');
         setTimeout(() => {
             window.location.reload();
