@@ -53,7 +53,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 | <img src="https://github.com/user-attachments/assets/31b53b88-0631-4882-ae2f-956acad661aa" width="350" alt="Settings Light" /> | <img src="https://github.com/user-attachments/assets/01096fa4-1e24-4221-b088-4be14cc63219" width="350" alt="Settings Dark" /> |
 
 
-## Usage
+## Main Usages
 
 -   Click the SimpleCookie icon to open the main popup showing cookie counts per site.  
 -   Right-click a website to display detailed information about all cookies from the clicked domain.  
