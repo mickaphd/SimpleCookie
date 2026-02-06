@@ -40,17 +40,9 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 
 ## Screenshots
 
-| Main Popup (Light) | Main Popup (Dark) |
-|:------------------:|:-----------------:|
-| <img src="https://github.com/user-attachments/assets/3241e18c-01ee-4992-a974-8d820ad482d2" width="200" alt="Popup Light" /> | <img src="https://github.com/user-attachments/assets/1626f4ad-b985-4242-9404-29a5d58a22f1" width="200" alt="Popup Dark" /> |
-
-| Detailed Table (Light) | Detailed Table (Dark) |
-|:---------------------:|:--------------------:|
-| <img src="https://github.com/user-attachments/assets/cee9e77e-de8c-4773-8db9-5487a894d4e7" width="350" alt="Table Light" /> | <img src="https://github.com/user-attachments/assets/cd52b5d7-75e5-4683-8c9a-7a25c8bc4128" width="350" alt="Table Dark" /> |
-
-| Settings (Light) | Settings (Dark) |
-|:-----------:|:----------:|
-| <img src="https://github.com/user-attachments/assets/31b53b88-0631-4882-ae2f-956acad661aa" width="350" alt="Settings Light" /> | <img src="https://github.com/user-attachments/assets/01096fa4-1e24-4221-b088-4be14cc63219" width="350" alt="Settings Dark" /> |
+| Main Popup (Light) | Detailed Table (Dark) | Settings (Light) |
+|:------------------:|:-----------------:|:-----------------:|
+| <img src="https://github.com/user-attachments/assets/2659ae03-7fa3-483e-b63c-8b8439269d6a" width="200" alt="Popup Light" /> | <img src="https://github.com/user-attachments/assets/d649d3eb-bf7d-4070-9ecd-021ab315a522" width="350" alt="Table Dark" /> | <img src="https://github.com/user-attachments/assets/9bc39eee-f5a0-4b35-908f-7b76d38670a7" width="30%" alt="Settings Light" />
 
 
 ## Main Usages
