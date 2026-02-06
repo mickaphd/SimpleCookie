@@ -16,7 +16,7 @@
 </p>
 
 
-SimpleCookie is the easiest and fastest way to view, learn about, and delete cookies. It also serves as a configurable cleaner. However, remember that cookies and related data are often very useful, so please use this add-on with caution, read the description carefully, and report any bugs or feature requests on GitHub.
+SimpleCookie is the easiest and fastest way to view, learn about, and delete cookies. It also serves as a configurable cleaner. Remember that cookies and related data are often very useful, so please use this add-on with caution, read the description carefully, and report any bugs or feature requests on GitHub.
 
 
 ## Table of Contents  
