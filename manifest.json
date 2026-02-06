@@ -22,13 +22,20 @@
     "background": {
         "scripts": [
             "background.js"
-        ],
-        "service_worker": "background.js"
+        ]
     },
     "manifest_version": 3,
     "name": "SimpleCookie",
     "icons": {
         "48": "resources/48.png",
         "96": "resources/96.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "{52eda0cb-74ba-4cdc-93cf-6454e8ca6fa4}",
+            "data_collection_permissions": {
+                "required": ["none"]
+            }
+        }
     }
 }
