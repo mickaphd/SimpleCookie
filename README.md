@@ -37,8 +37,6 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 - **Tab switcher**: Hold Command (Mac) or Ctrl (PC) to enable the Tab Switcher feature so that a left click on one of the open tabs highlighted in green will switch to it.
 - **Tracker database**: SimpleCookie uses an internal tracking database derived from Ghostery (trackerdb) to identify organizations/websites known to track behavior (ghost icon). While this does not confirm the collection of data in requests and cookies from these sites, they are known for their impact on user privacy.
 - **Theme options**: Light and Dark themes work seamlessly with Firefox's theme settings. The add-on also uses a system font that should be appropriate for the OS it runs on (macOS, Windows, Linux).
-- **Lightweight design**: Minimalist and efficient UI. No background scripts intentionally.
-
 
 ## Screenshots
 
@@ -61,7 +59,8 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 -   Right-click a website to display detailed information about all cookies from the clicked domain.  
 -   Left-click a website to delete all its cookies, or a cookie line in the table to delete that specific one. 
 -   Use the Dock icons for quick cleaning actions:  
-    - **Broom:** Clean cookies from closed tabs only (except your favorites) 
+    - **Broom:** Clean cookies from closed tabs only (except your favorites)
+    - **Sniper:** Delete very specific cookies from your 'Most Wanted' list (except your favorites) 
     - **Vacuum:** Clean all cookies (except your favorites)  
     - **Missile target:** Launch the 'myCleaner' feature  
     - **Gear:** Open settings  
@@ -70,7 +69,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 
 ## Privacy Policy
 
-SimpleCookie does not collect any data, and there is no analytics or telemetry in the code. This is just an open-source hobby project by an indie dev (I'm not even a developer; I'm a researcher!) who is concerned about privacy. SimpleCookie uses the following permissions to work properly: all_urls (for domain aggregation), browsingData (to clean up the dust!), cookies (of course!), tabs (to identify the active and closed tabs), contextualIdentities (for the containers), and storage (to store the settings).
+SimpleCookie does not collect any data, and there is no analytics or telemetry in the code. This is just an open-source hobby project designed at the begining just for myself, an indie dev (I'm not even a developer; I'm a researcher!) who is concerned about privacy. SimpleCookie uses the following permissions to work properly: all_urls (for domain aggregation), browsingData (to clean up the dust!), cookies (of course!), tabs (to identify the active and closed tabs), contextualIdentities (for the containers), and storage (to store the settings).
 
 
 ## Issues
