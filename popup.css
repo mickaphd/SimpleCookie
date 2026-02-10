@@ -57,7 +57,8 @@ body {
 #cookies-container {
     max-height: 500px;
     overflow-y: auto;
-    padding: 3px 5px 4px 1px;
+    overflow-x: hidden;
+    padding: 3px 20px 4px 1px;
     flex-grow: 1;
     position: relative;
 }
@@ -75,7 +76,8 @@ body {
     position: relative;
     will-change: background-color, transform;
     margin-left: 0;
-    padding: 3px 10px;
+    margin-right: -15px;
+    padding: 3px 25px 3px 10px;
     font-size: 13.5px;
     line-height: 1.3;
     transition: background-color 0.15s ease, transform 0.15s ease;
@@ -127,6 +129,7 @@ body {
     justify-content: center;
     position: relative;
     z-index: 100;
+    overflow: hidden; 
 }
 
 #dock {
@@ -299,4 +302,6 @@ body {
     display: flex;
     align-items: center;
     line-height: 1;
+    cursor: default;
+    pointer-events: none;
 }
