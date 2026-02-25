@@ -20,7 +20,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 
 
 ## Table of Contents  
-[Features](#features) | [Screenshots](#screenshots) | [Usage](#usage) | [Privacy Policy](#privacy-policy) | [Issues](#issues)
+[Features](#features) | [Screenshots](#screenshots) | [Usage](#main-usages) | [Privacy Policy](#privacy-policy) | [Issues](#issues)
 
 
 ## Features
