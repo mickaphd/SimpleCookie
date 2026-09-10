@@ -5,7 +5,7 @@
   <br />
   <strong>Status:</strong> Maintained
   <br>
-  <strong>Version:</strong> 3.4.2
+  <strong>Version:</strong> 3.5
   <br />
 <p align="center">
   <a href="https://addons.mozilla.org/firefox/addon/simplecookie/" target="_blank" rel="noopener">
