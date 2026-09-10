@@ -3,7 +3,7 @@
     "host_permissions": [
         "<all_urls>"
     ],
-    "version": "3.4.2",
+    "version": "3.5.0",
     "author": "micka",
     "permissions": [
         "browsingData",
@@ -21,6 +21,7 @@
     },
     "background": {
         "scripts": [
+            "common.js",
             "background.js"
         ]
     },

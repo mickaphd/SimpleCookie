@@ -342,18 +342,25 @@
                 </div>
                 <input type="checkbox" id="enablePartitionIcon" aria-label="Highlight partitioned cookie websites">
             </div>
+            <div class="settings-option">
+                <div class="option-content" title="Highlight websites with at least one cookie that looks like a session or authentication cookie (based on its name) but is missing the Secure and/or HttpOnly protection. This is a heuristic, not a guarantee: it cannot see how a site actually uses the cookie, only how it was set. These websites are always listed in SimpleCookie, only the icon is optional. Off by default.">
+                    <img src="resources/insight_risky.svg" alt="Risky cookie icon">
+                    <span>Highlight cookies at risk</span>
+                </div>
+                <input type="checkbox" id="enableRiskyCookieIcon" aria-label="Highlight websites with risky cookies">
+            </div>
         </div>
 
         <!-- mySniper -->
         <div class="section">
-            <div class="section-title" title="Configure your 'Most Wanted' list of domains to specifically delete.">mySniper</div>
+            <div class="section-title" title="Keywords that are never allowed to appear in a cookie's domain. There is no button to press: as soon as a keyword is on this list, any matching cookie is deleted automatically — right away if it already exists, and the instant a new one appears from then on. Firefox has no way to truly stop a cookie from being set at all, so this is 'delete on sight', not real prevention.">mySniper</div>
             <div class="settings-option">
-                <div class="option-content" title="Add domains such as 'google.com' or '.google.com' to delete cookies from these specific domains. Place a '*' before the domain, like '*google.com', to delete all cookies associated with that domain, regardless of the subdomains. Use a comma to separate multiple domains.">
-                    <img src="resources/icon6.svg" alt="Sniper domains icon">
-                    <span>Domains to snipe</span>
+                <div class="option-content" title="Type a plain keyword such as 'google' or 'linkedin' — any cookie whose domain contains that word anywhere (any subdomain, any country TLD) is deleted automatically, no matter what comes before or after it. Any matching cookie that already exists is removed right away; new ones are deleted the instant they appear. Use a comma to separate multiple keywords. Keywords under 3 characters are ignored, to avoid matching too many unrelated sites. Favorite domains are never touched. Removing a keyword from this list simply stops the auto-deletion.">
+                    <img src="resources/icon6.svg" alt="Sniper keywords icon">
+                    <span>Keywords to keep cookie-free <img src="resources/settings_danger.svg" class="danger-icon" alt="Warning" aria-label="Warning"></span>
                 </div>
             </div>
-            <textarea id="sniperDomains" placeholder="google.com, *google.com, facebook.com" title="Add domains such as 'google.com' or '.google.com' to delete cookies from these specific domains. Place a '*' before the domain, like '*google.com', to delete all cookies associated with that domain, regardless of the subdomains. Use a comma to separate multiple domains."></textarea>
+            <textarea id="sniperDomains" placeholder="google, linkedin, facebook" title="Type a plain keyword such as 'google' or 'linkedin' — any cookie whose domain contains that word anywhere (any subdomain, any country TLD) is deleted automatically, no matter what comes before or after it. Any matching cookie that already exists is removed right away; new ones are deleted the instant they appear. Use a comma to separate multiple keywords. Keywords under 3 characters are ignored, to avoid matching too many unrelated sites. A broad keyword can break other sites that share its cookies — e.g. 'google' can break YouTube sign-in. Favorite domains are never touched. Removing a keyword from this list simply stops the auto-deletion."></textarea>
         </div>
 
         <!-- myCleaner -->
@@ -461,7 +468,7 @@
             </div>
             <div class="settings-option">
                 <div class="option-content">
-                    <a href="#" id="resetButton" title="Clear all of your favorites (not the cookies, just the 'star' status) and reset all of the above settings back to their factory defaults.">
+                    <a href="#" id="resetButton" title="Clear all of your favorites (not the cookies, just the 'star' status), your mySniper keyword list, and reset all of the above settings back to their factory defaults. Asks for confirmation first.">
                         <img src="resources/settings_reset.svg" alt="Reset icon">
                         <span>Reset your favorites and settings</span>
                     </a>
@@ -527,6 +534,7 @@
         <div id="version-text" class="version-text">SimpleCookie v</div>
     </div>
 
+    <script src="common.js"></script>
     <script src="settings.js"></script>
 </body>
 </html>

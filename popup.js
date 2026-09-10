@@ -19,8 +19,25 @@ let undoTimeout;
 // Global variable to store favorites
 let favorites = [];
 
-// Array to store sniper domains
-let sniperDomains = [];
+// True while a destructive action (delete/undo) is in flight. Without this,
+// rapid-clicking two different domains — or a domain then Undo — before the
+// first click's async work and re-render finish could interleave and clobber
+// tempDeletedCookies (a plain reassignment, not a merge) or the cookies array.
+let isBusy = false;
+
+/**
+ * Runs `action` only if no other destructive action is currently in flight.
+ * @param {() => Promise<void>} action
+ */
+async function withBusyGuard(action) {
+    if (isBusy) return;
+    isBusy = true;
+    try {
+        await action();
+    } finally {
+        isBusy = false;
+    }
+}
 
 
 // ==================== STORAGE MANAGEMENT ====================
@@ -55,36 +72,9 @@ async function saveFavorites(favList) {
     }
 }
 
-/**
- * Loads sniper domains from browser storage
- * @returns {Promise<Array>} Array of sniper domains
- */
-async function loadSniperDomains() {
-    try {
-        const data = await browser.storage.local.get('sniperDomains');
-        sniperDomains = data.sniperDomains ? 
-            data.sniperDomains.map(d => d.trim().toLowerCase()).filter(d => d) : [];
-        return sniperDomains;
-    } catch (error) {
-        console.error('Error loading sniper domains:', error);
-        sniperDomains = [];
-        return [];
-    }
-}
-
-/**
- * Saves sniper domains to browser storage
- * @param {Array} domains - Array of sniper domains
- * @returns {Promise<void>}
- */
-async function saveSniperDomains(domains) {
-    try {
-        await browser.storage.local.set({ sniperDomains: domains });
-        sniperDomains = domains;
-    } catch (error) {
-        console.error('Error saving sniper domains:', error);
-    }
-}
+// mySniper is now fully automatic: settings.js saves the domain list, and
+// background.js (via cookies.onChanged) is what actually deletes matching
+// cookies as soon as they appear — see background.js.
 
 
 // ==================== DATA FETCHING ====================
@@ -105,49 +95,9 @@ async function fetchTrackerDB() {
     }
 }
 
-/**
- * Fetches all cookies from all containers and avoids duplicates
- * Retrieves both normal and partitioned cookies
- * @returns {Promise<Array>} Array of unique cookie objects
- */
-async function fetchAllCookies() {
-    try {
-        // Fetch all containers
-        const containers = await browser.contextualIdentities.query({});
-        const cookiePromises = [];
-        
-        // Get all store IDs (containers + default)
-        const storeIds = [...containers.map(container => container.cookieStoreId), ""];
-        
-        // For each store ID, fetch both normal and partitioned cookies
-        storeIds.forEach(storeId => {
-            // Normal cookies
-            cookiePromises.push(browser.cookies.getAll({ storeId }));
-            // Partitioned cookies
-            cookiePromises.push(browser.cookies.getAll({ storeId, partitionKey: {} }));
-        });
-        
-        // Wait for all promises to resolve and flatten the result
-        const allCookies = (await Promise.all(cookiePromises)).flat();
-        
-        // More complete uniqueness check using all relevant properties
-        const uniqueMap = new Map();
-        
-        allCookies.forEach(cookie => {
-            // Create a comprehensive unique key for each cookie
-            const key = `${cookie.name}-${cookie.domain}-${cookie.path}-${cookie.storeId}-${cookie.partitionKey ? JSON.stringify(cookie.partitionKey) : 'null'}-${cookie.value}-${cookie.expirationDate || 'session'}-${cookie.secure}-${cookie.httpOnly}-${cookie.sameSite}`;
-            
-            if (!uniqueMap.has(key)) {
-                uniqueMap.set(key, cookie);
-            }
-        });
-        
-        return Array.from(uniqueMap.values());
-    } catch (error) {
-        console.error('Error fetching cookies:', error);
-        return [];
-    }
-}
+// fetchAllCookies() lives in common.js — shared with settings.js so both
+// pages fetch and de-duplicate cookies (including partitioned/CHIPS ones)
+// exactly the same way.
 
 /**
  * Fetches all cookies and open tabs
@@ -182,40 +132,24 @@ async function fetchData() {
  * Merges stored settings with defaults
  */
 async function applySettings() {
-    const defaultSettings = {
-        enableGhostIcon: true,
-        enableSpecialJarIcon: true,
-        enablePartitionIcon: true,
-        enableActiveTabHighlight: true,
-        mycleanerCookies: false,
-        mycleanerBrowsingHistory: true,
-        mycleanerCache: false,
-        mycleanerAutofill: false,
-        mycleanerDownloadHistory: true,
-        mycleanerService: false,
-        mycleanerPlugin: false,
-        mycleanerLocal: false,
-        mycleanerIndexed: false,
-        mycleanerPasswords: false,
-        OpenTabsTop: false,
-        showCookieCountBadge: true
-    };
-
+    // Defaults live in common.js (DEFAULT_SETTINGS) so popup.js and settings.js
+    // can never silently disagree about what a "default" is.
     try {
         // Get settings from storage and merge with defaults
-        const storedSettings = await browser.storage.local.get(defaultSettings);
-        const settings = { ...defaultSettings, ...storedSettings };
+        const storedSettings = await browser.storage.local.get(DEFAULT_SETTINGS);
+        const settings = { ...DEFAULT_SETTINGS, ...storedSettings };
         await browser.storage.local.set(settings);
 
-        const { 
-            enableGhostIcon, 
-            enableSpecialJarIcon, 
-            enablePartitionIcon, 
-            enableActiveTabHighlight 
+        const {
+            enableGhostIcon,
+            enableSpecialJarIcon,
+            enablePartitionIcon,
+            enableRiskyCookieIcon,
+            enableActiveTabHighlight
         } = settings;
 
         // Display cookies based on user preferences
-        displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon);
+        displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableRiskyCookieIcon);
 
         // Highlight the active tab domain if enabled
         if (enableActiveTabHighlight) {
@@ -232,10 +166,9 @@ async function applySettings() {
  */
 async function initExtension() {
     try {
-        // Load favorites and sniper domains first
+        // Load favorites first
         await loadFavorites();
-        await loadSniperDomains();
-        
+
         // Then check if any cookies exist
         cookies = await fetchAllCookies();
         
@@ -310,13 +243,15 @@ async function updateDisplay() {
             'enableGhostIcon',
             'enableSpecialJarIcon',
             'enablePartitionIcon',
+            'enableRiskyCookieIcon',
             'enableActiveTabHighlight'
         ]);
 
         displayCookies(
-            settings.enableGhostIcon, 
-            settings.enableSpecialJarIcon, 
-            settings.enablePartitionIcon
+            settings.enableGhostIcon,
+            settings.enableSpecialJarIcon,
+            settings.enablePartitionIcon,
+            settings.enableRiskyCookieIcon
         );
 
         // Highlight active tab if enabled
@@ -328,8 +263,11 @@ async function updateDisplay() {
     }
 }
 
-// Initialize the extension when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initExtension);
+// The extension is actually initialized by the consolidated DOMContentLoaded
+// handler further down (in the EVENT LISTENERS section), which awaits
+// initExtension() itself before wiring up the rest of the popup — a second,
+// separate listener registered here used to call initExtension() again,
+// running every fetch/render on every popup open twice over.
 
 
 // ==================== DISPLAY LOGIC ====================
@@ -352,26 +290,47 @@ function getCurrentTheme() {
     return getCurrentTheme.cache;
 }
 
+// ==================== RISK HEURISTICS ====================
+
+/**
+ * Cookie names that commonly hold a session or authentication token.
+ * This is a heuristic based on widely used naming conventions
+ * (PHPSESSID, JSESSIONID, .ASPXAUTH, connect.sid, auth_token, etc.) —
+ * it cannot know how a site actually uses the cookie, only how it looks.
+ */
+const RISKY_NAME_PATTERN = /sess|auth|token|jwt|login|logged|credential|(^|[_.])sid$/i;
+
+/**
+ * Flags a cookie as "at risk" when it looks like it holds session or
+ * authentication data but lacks the browser-level protections that would
+ * keep it safe from network sniffing (Secure) or client-side script
+ * access (HttpOnly).
+ * @param {Object} cookie - Cookie object
+ * @returns {boolean} True if the cookie looks sensitive and under-protected
+ */
+function isRiskyCookie(cookie) {
+    if (!RISKY_NAME_PATTERN.test(cookie.name)) return false;
+    return !cookie.secure || !cookie.httpOnly;
+}
+
 /**
  * Displays cookies with favorites and insight icons
  * @param {boolean} enableGhostIcon - Whether to show tracking site icon
  * @param {boolean} enableSpecialJarIcon - Whether to show container icon
  * @param {boolean} enablePartitionIcon - Whether to show partition icon
+ * @param {boolean} enableRiskyCookieIcon - Whether to show at-risk cookie icon
  */
-async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon) {
+async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableRiskyCookieIcon) {
     // Fetch the "OpenTabsTop" setting to determine sorting behavior
     const { OpenTabsTop = false } = await browser.storage.local.get('OpenTabsTop');
 
     const container = document.getElementById('cookies-container');
-    const starDock = document.querySelector('.star-dock');
     if (!container) return; // Safety check
 
     // Clear previous content
     container.innerHTML = '';
-    if (starDock) starDock.innerHTML = '';
 
     const fragment = document.createDocumentFragment();
-    const starsFragment = document.createDocumentFragment();
 
     // Build a Set of main domains from open tabs for quick membership checks
     const openTabDomainsSet = new Set(tabs.map(({ url }) => {
@@ -390,7 +349,8 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
             domainInfo[mainDomain] = {
                 count: 0,
                 hasNonDefaultContainer: false,
-                hasPartition: false
+                hasPartition: false,
+                hasRiskyCookie: false
             };
         }
         domainInfo[mainDomain].count += 1;
@@ -400,6 +360,9 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
         }
         if (cookie.partitionKey) {
             domainInfo[mainDomain].hasPartition = true;
+        }
+        if (isRiskyCookie(cookie)) {
+            domainInfo[mainDomain].hasRiskyCookie = true;
         }
     });
 
@@ -473,6 +436,9 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
         if (enablePartitionIcon && info.hasPartition) {
             appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
         }
+        if (enableRiskyCookieIcon && info.hasRiskyCookie) {
+            appendIcon(element, 'resources/insight_risky.svg', `${website} has a cookie at risk`);
+        }
 
         // Highlight domains with open tabs in green color
         if (openTabDomainsSet.has(website)) {
@@ -481,10 +447,6 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
     });
 
     container.appendChild(fragment);
-    if (starDock) starDock.appendChild(starsFragment);
-
-    // Position stars aligned with their domain entries after rendering
-    requestAnimationFrame(() => positionStarsInDock());
 
     // Call highlightActiveTabDomain at the end of displayCookies
     const settings = await browser.storage.local.get('enableActiveTabHighlight');
@@ -504,31 +466,10 @@ function appendIcon(element, iconSrc, altText) {
     icon.src = iconSrc;
     icon.alt = altText;
     icon.className = 'insight-icon';
-    element.appendChild(document.createTextNode(' '));
+    // No space text node here: .cookie-item is a flex row with its own
+    // `gap`, which already spaces every child evenly — adding a literal
+    // space on top of that was stacking two gaps between icons.
     element.appendChild(icon);
-}
-
-/**
- * Positions stars in the vertical dock aligned with their domain entries
- */
-function positionStarsInDock() {
-    const container = document.getElementById('cookies-container');
-    const starDock = document.querySelector('.star-dock');
-    
-    if (!container || !starDock) return;
-    
-    const stars = starDock.querySelectorAll('.star-icon');
-    const domainElements = container.querySelectorAll('div');
-    
-    // Position each star next to its corresponding domain entry
-    domainElements.forEach((element, index) => {
-        if (index < stars.length) {
-            const rect = element.getBoundingClientRect();
-            const top = element.offsetTop + (rect.height / 2) - 7; // Center vertically
-            
-            stars[index].style.top = `${top}px`;
-        }
-    });
 }
 
 /**
@@ -558,7 +499,6 @@ function highlightActiveTabDomain() {
             icon.alt = 'Active Tab Icon';
             icon.className = 'insight-icon active-tab-icon';
 
-            activeElement.appendChild(document.createTextNode(' '));
             activeElement.appendChild(icon);
         }
     } catch (error) {
@@ -644,16 +584,6 @@ async function navigateToTab(domain) {
     return false;
 }
 
-/**
- * Determines if the platform-specific modifier key is pressed
- * @param {Event} event - The keyboard event
- * @returns {boolean} True if the platform-specific modifier key is pressed
- */
-function isModifierKeyPressed(event) {
-    const isMacOS = navigator.platform.toLowerCase().includes('mac');
-    return isMacOS ? event.metaKey : event.ctrlKey;
-}
-
 
 // ==================== DETAILED TABLE ====================
 
@@ -663,8 +593,13 @@ function isModifierKeyPressed(event) {
  * @param {Array} cookies - Array of cookie objects
  */
 function displayCookieDetails(mainDomain, cookies) {
+    // Remove any previously-displayed detail table before showing a new one —
+    // otherwise right-clicking multiple domains keeps stacking tables (and
+    // their listeners, some referencing already-stale cookie data) forever.
+    document.querySelectorAll('.cookie-table').forEach(table => table.remove());
+
     const isDarkMode = getCurrentTheme() === 'dark';
-    
+
     // Filter and sort cookies for the given main domain
     const sortedCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === mainDomain)
                                 .sort((a, b) => a.name.localeCompare(b.name));
@@ -781,14 +716,23 @@ function displayCookieDetails(mainDomain, cookies) {
             }
             
             // Check if this is the expiration date cell and if the cookie is expired
-            if (index === 6 && expirationDate) {
+            // (expirationDate !== undefined, not a truthy check: a cookie
+            // expiring exactly at the Unix epoch has expirationDate === 0,
+            // which is falsy and would otherwise skip the expired highlight)
+            if (index === 6 && expirationDate !== undefined) {
                 const now = Math.floor(Date.now() / 1000);
                 if (expirationDate < now) {
                     cell.style.color = 'red';
                     cell.title = 'This cookie has expired.';
                 }
             }
-            
+
+            // Highlight the name of cookies that look like an under-protected session/auth cookie
+            if (index === 0 && isRiskyCookie(cookie)) {
+                cell.style.color = '#EA4335';
+                cell.title = 'This looks like a session/authentication cookie but is missing Secure and/or HttpOnly protection.';
+            }
+
             row.appendChild(cell);
         });
         
@@ -798,18 +742,26 @@ function displayCookieDetails(mainDomain, cookies) {
             if (isFavorite) {
                 return; // Skip deletion for favorites
             }
-            // Store the deleted cookie for undo functionality
-            tempDeletedCookies.push({ ...cookie });
-            await deleteCookie({
-                name: cookie.name,
-                domain: cookie.domain,
-                path: cookie.path,
-                secure: cookie.secure,
-                storeId: cookie.storeId,
-                partitionKey: cookie.partitionKey
+            await withBusyGuard(async () => {
+                // Store the deleted cookie for undo functionality
+                tempDeletedCookies.push({ ...cookie });
+                await deleteCookie({
+                    name: cookie.name,
+                    domain: cookie.domain,
+                    path: cookie.path,
+                    secure: cookie.secure,
+                    storeId: cookie.storeId,
+                    partitionKey: cookie.partitionKey
+                });
+                row.remove();
+                showUndoIcon(); // Show undo option after deletion
+
+                // deleteCookie() no longer refreshes on its own (see its comment),
+                // so refresh the underlying domain list / counter here instead.
+                // updateDisplay() already does its own fetchAllCookies() + empty
+                // check, so there's no need to duplicate that here.
+                await updateDisplay();
             });
-            row.remove();
-            showUndoIcon(); // Show undo option after deletion
         });
         
         // Add hover effects for the row
@@ -831,7 +783,13 @@ function displayCookieDetails(mainDomain, cookies) {
 // ==================== COOKIE DELETION ====================
 
 /**
- * Deletes a cookie based on its properties
+ * Deletes a single cookie based on its properties
+ * This is a pure removal: it does NOT refetch cookies or refresh the popup
+ * display. It used to do both internally, which meant deleting a whole
+ * domain triggered one full cookie refetch and one full re-render PER
+ * cookie instead of once for the whole batch. Callers are now responsible
+ * for refreshing afterward — see deleteCookies() below for the batch case,
+ * and the cookie-detail table's row click handler for the single-cookie case.
  * @param {Object} cookie - Cookie object with properties needed for deletion
  * @returns {Promise<void>}
  */
@@ -849,18 +807,6 @@ async function deleteCookie(cookie) {
             storeId: storeId,
             partitionKey: cookie.partitionKey
         });
-
-        // Fetch cookies again to see if we've removed the last one
-        cookies = await fetchAllCookies();
-        
-        // If no cookies left, show message and return
-        if (cookies.length === 0) {
-            showNoCoookiesMessage();
-            return;
-        }
-        
-        // Otherwise continue with normal update
-        await updateDisplay();
     } catch (error) {
         console.error('Error deleting cookie:', error);
     }
@@ -868,6 +814,8 @@ async function deleteCookie(cookie) {
 
 /**
  * Deletes cookies based on a filter function
+ * All matching cookies are removed in parallel, and the caller is expected
+ * to refresh the cookies array / display once afterward (see callers below).
  * @param {Function} filterFn - Function that returns true for cookies to delete
  * @returns {Promise<void>}
  */
@@ -882,36 +830,24 @@ async function deleteCookies(filterFn) {
 
 /**
  * Deletes all cookies for a specific domain
+ * Pure mutation + arms Undo — same contract as deleteCookie(): the caller
+ * refreshes the display (once) afterward, see its click handler below.
  * @param {string} domain - Domain to delete cookies for
  */
 async function deleteAllCookiesForDomain(domain) {
-    if (favorites.includes(getMainDomain(domain))) return; // Skip deletion for favorites
+    const mainDomain = getMainDomain(domain); // computed once, not per filter call
+    if (favorites.includes(mainDomain)) return; // Skip deletion for favorites
 
     try {
-        const domainCookies = cookies.filter(cookie => 
-            getMainDomain(cookie.domain) === getMainDomain(domain)
-        );
-        
+        const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === mainDomain);
+
         // Save for potential undo
         tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
-        
+
         // Delete all cookies for this domain
-        await deleteCookies(cookie => 
-            getMainDomain(cookie.domain) === getMainDomain(domain)
-        );
-        
-        // Fetch cookies again to see if we've removed everything
-        cookies = await fetchAllCookies();
-        
-        // If no cookies left, show message and return
-        if (cookies.length === 0) {
-            showNoCoookiesMessage();
-            return;
-        }
-        
-        // Otherwise show undo icon and update display
+        await deleteCookies(cookie => getMainDomain(cookie.domain) === mainDomain);
+
         showUndoIcon();
-        await updateDisplay();
     } catch (error) {
         console.error('Error deleting cookies for domain:', error);
     }
@@ -919,78 +855,17 @@ async function deleteAllCookiesForDomain(domain) {
 
 /**
  * Deletes cookies from tabs that are no longer open
+ * Pure mutation — the caller refreshes the display afterward (see icon1's
+ * click handler below).
  * @param {Array} closedTabsCookies - Array of cookies from closed tabs
  */
 async function deleteCookiesFromClosedTabs(closedTabsCookies) {
     try {
-        await deleteCookies(cookie => {
-            return closedTabsCookies.includes(cookie) && 
-                  !favorites.includes(getMainDomain(cookie.domain));
-        });
-        
-        // Fetch cookies again to see if we've removed everything
-        cookies = await fetchAllCookies();
-        
-        // If no cookies left, show message and return
-        if (cookies.length === 0) {
-            showNoCoookiesMessage();
-            return;
-        }
+        await deleteCookies(cookie =>
+            closedTabsCookies.includes(cookie) && !favorites.includes(getMainDomain(cookie.domain))
+        );
     } catch (error) {
         console.error('Error deleting cookies from closed tabs:', error);
-    }
-}
-
-/**
- * Deletes cookies matching sniper domain list (exact or wildcard)
- * Exact: "google.com" only matches google.com
- * Wildcard: "*google.com" matches any subdomain of google.com
- * Respects favorite domains
- */
-async function mySniper() {
-    if (sniperDomains.length === 0) return;
-    
-    try {
-        const favoriteDomains = new Set(favorites.map(getMainDomain));
-        
-        // For each sniper domain, delete matching cookies
-        for (const sniperDomain of sniperDomains) {
-            const isWildcard = sniperDomain.startsWith('*');
-            const cleanDomain = isWildcard ? sniperDomain.substring(1) : sniperDomain;
-            
-            const cookiesToDelete = cookies.filter(cookie => {
-                const mainDomain = getMainDomain(cookie.domain);
-                // Skip if domain is in favorites
-                if (favoriteDomains.has(mainDomain)) return false;
-                
-                if (isWildcard) {
-                    // Wildcard: match cleanDomain and all subdomains
-                    return cookie.domain === cleanDomain || 
-                           cookie.domain === '.' + cleanDomain ||
-                           cookie.domain.endsWith('.' + cleanDomain);
-                } else {
-                    // Exact: match cleanDomain only
-                    return cookie.domain === cleanDomain || 
-                           cookie.domain === '.' + cleanDomain;
-                }
-            });
-            
-            for (const cookie of cookiesToDelete) {
-                await deleteCookie(cookie);
-            }
-        }
-        
-        // Fetch cookies again to update display
-        cookies = await fetchAllCookies();
-        
-        if (cookies.length === 0) {
-            showNoCoookiesMessage();
-            return;
-        }
-        
-        await updateDisplay();
-    } catch (error) {
-        console.error('Error running mySniper:', error);
     }
 }
 
@@ -1000,9 +875,21 @@ async function mySniper() {
  */
 async function undoLastDeletion() {
     if (tempDeletedCookies.length === 0) return;
-    
+
     try {
-        await Promise.all(tempDeletedCookies.map(cookie => {
+        // A cookie that matches an active mySniper keyword would just be
+        // deleted again the instant it's restored (background.js reacts to
+        // every cookie write) — skip restoring those rather than have them
+        // flicker back for an instant and vanish with no explanation.
+        const { sniperDomains = [], favorites: currentFavorites = [] } = await browser.storage.local.get(['sniperDomains', 'favorites']);
+        const favoriteDomains = new Set((Array.isArray(currentFavorites) ? currentFavorites : []).map(getMainDomain));
+        const sniperKeywords = Array.isArray(sniperDomains) ? sniperDomains : [];
+        const cookiesToRestore = tempDeletedCookies.filter(cookie =>
+            favoriteDomains.has(getMainDomain(cookie.domain)) ||
+            !sniperKeywords.some(keyword => cookieMatchesSniperDomain(cookie, keyword))
+        );
+
+        await Promise.all(cookiesToRestore.map(cookie => {
             return browser.cookies.set({
                 url: getCookieUrl(cookie),
                 name: cookie.name,
@@ -1017,7 +904,6 @@ async function undoLastDeletion() {
         }));
 
         tempDeletedCookies = [];
-        await fetchCookiesAndTabs();
         await updateDisplay();
 
         // Hide only the undo icon
@@ -1025,7 +911,7 @@ async function undoLastDeletion() {
         if (undoIcon) {
             undoIcon.style.display = 'none';
         }
-        
+
         // Clear the timeout
         clearTimeout(undoTimeout);
     } catch (error) {
@@ -1086,16 +972,6 @@ async function myCleaner() {
 
         if (Object.keys(mycleaner).length > 0) {
             await browser.browsingData.remove({ since: 0 }, mycleaner);
-            
-            // If cookies were cleared, check if we need to show empty message
-            if (mycleaner.cookies) {
-                cookies = await fetchAllCookies();
-                
-                if (cookies.length === 0) {
-                    showNoCoookiesMessage();
-                    return;
-                }
-            }
         }
     } catch (error) {
         console.error('Error running myCleaner:', error);
@@ -1155,29 +1031,33 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 } else {
                     // Default behavior - delete cookies
-                    const domainCookies = cookies.filter(cookie => 
-                        getMainDomain(cookie.domain) === getMainDomain(website)
-                    );
-                    
+                    const mainDomain = getMainDomain(website);
+                    const domainCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === mainDomain);
+
                     if (domainCookies.length === 0) return;
-                    
-                    await deleteAllCookiesForDomain(website);
-                    await updateDisplay();
+
+                    await withBusyGuard(async () => {
+                        await deleteAllCookiesForDomain(website);
+                        await updateDisplay();
+                    });
                 }
             }
         });
 
         // Event listener for the cookie container right-click: Displays cookie details for the selected domain
         cookiesContainer?.addEventListener('contextmenu', async (event) => {
-            if (event.target.nodeName === 'DIV') {
-                const website = event.target.textContent.split(' ')[0];
-                event.preventDefault();
-                await displayCookieDetails(website, cookies);
+            try {
+                if (event.target.nodeName === 'DIV') {
+                    const website = event.target.textContent.split(' ')[0];
+                    event.preventDefault();
+                    await displayCookieDetails(website, cookies);
+                }
+            } catch (error) {
+                console.error('Error in contextmenu handler:', error);
             }
         });
 
         const icon1 = document.getElementById('icon1');
-        const icon6 = document.getElementById('icon6');
         const icon2 = document.getElementById('icon2');
         const icon3 = document.getElementById('icon3');
         const icon5 = document.getElementById('icon5');
@@ -1186,36 +1066,19 @@ document.addEventListener('DOMContentLoaded', async function () {
         icon1?.addEventListener('click', async () => {
             try {
                 if (!hasCookiesToDelete()) return;
-                const userConfirmed = await showConfirmationModal(cookies);
+                const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+                const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
+                if (cookiesAssociatedWithClosedTabs.length === 0) return;
+
+                const userConfirmed = await showConfirmationModal();
                 if (userConfirmed) {
-                    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-                    const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-                    await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
-                    await updateDisplay();
+                    await withBusyGuard(async () => {
+                        await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
+                        await updateDisplay();
+                    });
                 }
             } catch (error) {
                 console.error('Error in icon1 click handler:', error);
-            }
-        });
-
-        // Event listener for the icon6 to trigger mySniper
-        icon6?.addEventListener('click', async () => {
-            try {
-                // Reload sniper domains from storage before checking
-                await loadSniperDomains();
-                
-                if (sniperDomains.length === 0) {
-                    // No sniper domains configured
-                    return;
-                }
-                if (!hasCookiesToDelete()) return;
-                const userConfirmed = await showConfirmationModal(cookies);
-                if (userConfirmed) {
-                    await mySniper();
-                    await updateDisplay();
-                }
-            } catch (error) {
-                console.error('Error in icon6 click handler:', error);
             }
         });
 
@@ -1223,26 +1086,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         icon2?.addEventListener('click', async () => {
             try {
                 if (!hasCookiesToDelete()) return;
-                const userConfirmed = await showConfirmationModal(cookies);
+                const favoriteDomains = new Set(favorites.map(getMainDomain));
+                const cookiesToDelete = cookies.filter(cookie => !favoriteDomains.has(getMainDomain(cookie.domain)));
+                if (cookiesToDelete.length === 0) return;
+
+                const userConfirmed = await showConfirmationModal();
                 if (userConfirmed) {
-                    const favoriteDomains = new Set(favorites.map(getMainDomain));
-                    const cookiesToDelete = cookies.filter(cookie => 
-                        !favoriteDomains.has(getMainDomain(cookie.domain))
-                    );
-                    
-                    if (cookiesToDelete.length > 0) {
+                    await withBusyGuard(async () => {
                         await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
-                    }
-                    
-                    // Fetch cookies again to check if we've removed everything
-                    cookies = await fetchAllCookies();
-                    
-                    if (cookies.length === 0) {
-                        showNoCoookiesMessage();
-                        return;
-                    }
-                    
-                    await updateDisplay();
+                        await updateDisplay();
+                    });
                 }
             } catch (error) {
                 console.error('Error in icon2 click handler:', error);
@@ -1253,10 +1106,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         icon3?.addEventListener('click', async () => {
             try {
                 if (!hasCookiesToDelete()) return;
-                const userConfirmed = await showConfirmationModal(cookies);
+                const userConfirmed = await showConfirmationModal();
                 if (userConfirmed) {
-                    await myCleaner();
-                    await updateDisplay();
+                    await withBusyGuard(async () => {
+                        await myCleaner();
+                        await updateDisplay();
+                    });
                 }
             } catch (error) {
                 console.error('Error in icon3 click handler:', error);
@@ -1266,15 +1121,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Event listener for the icon5 to undo the very last cookie deletion
         icon5?.addEventListener('click', async () => {
             try {
-                await undoLastDeletion();
+                await withBusyGuard(undoLastDeletion);
             } catch (error) {
                 console.error('Error in icon5 click handler:', error);
             }
         });
 
-        // Event listener for window resize to reposition stars
-        window.addEventListener('resize', positionStarsInDock);
-        
         // When popup opens, initialize with default state
         highlightOpenTabDomains(false);
     } catch (error) {
@@ -1306,14 +1158,8 @@ function showUndoIcon() {
     }, 20000); // 20 seconds to undo
 }
 
-/**
- * Constructs the URL for a cookie
- * @param {Object} cookie - Cookie object
- * @returns {string} URL for the cookie
- */
-function getCookieUrl(cookie) {
-    return `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`;
-}
+// getCookieUrl() lives in common.js — shared with background.js, which now
+// also needs to build cookie removal URLs to enforce mySniper.
 
 /**
  * Checks if there are any cookies to delete
@@ -1326,6 +1172,10 @@ function hasCookiesToDelete() {
 
 /**
  * Shows a confirmation modal dialog
+ * Deliberately icon-only, no message text: the popup is narrow enough that
+ * a wrapped sentence in the fixed-position overlay looks broken rather than
+ * helpful (tried it, it didn't work — see the dock icons' own tooltips for
+ * the "what does this do" explanation instead).
  * @returns {Promise<boolean>} Promise resolving to true if confirmed, false if cancelled
  */
 function showConfirmationModal() {
@@ -1333,7 +1183,7 @@ function showConfirmationModal() {
         const modal = document.getElementById('confirmation-modal');
         const yesButton = document.getElementById('confirm-yes');
         const noButton = document.getElementById('confirm-no');
-        
+
         if (!modal || !yesButton || !noButton) {
             resolve(false);
             return;
@@ -1366,66 +1216,9 @@ function showConfirmationModal() {
 
 // ==================== DOMAIN HELPERS ====================
 
-// Fixed number of levels for domain extraction
-const numLevels = -2;
-
-// Object to hold special second-level domains (SLDs) sorted by country
-const specialSLDs = {
-    Algeria: ['com.dz', 'gov.dz', 'org.dz', 'edu.dz', 'asso.dz', 'pol.dz', 'art.dz', 'net.dz', 'tm.dz', 'soc.dz'],
-    Australia: ['com.au', 'net.au', 'org.au', 'edu.au', 'gov.au', 'asn.au', 'id.au', 'csiro.au'],
-    Austria: ['ac.at', 'gv.at', 'co.at', 'or.at', 'priv.at'],
-    Bangladesh: ['com.bd', 'net.bd', 'org.bd', 'edu.bd', 'ac.bd', 'info.bd', 'co.bd', 'gov.bd', 'mil.bd', 'tv.bd'],
-    Brazil: ['app.br', 'art.br', 'com.br', 'dev.br', 'eco.br', 'emp.br', 'log.br', 'net.br', 'ong.br', 'seg.br', 'edu.br', 'blog.br', 'flog.br', 'nom.br', 'vlog.br', 'wiki.br', 'agr.br', 'esp.br', 'etc.br', 'far.br', 'imb.br', 'ind.br', 'inf.br', 'radio.br', 'rec.br', 'srv.br', 'tmp.br', 'tur.br', 'tv.br', 'am.br', 'coop.br', 'fm.br', 'g12.br', 'gov.br', 'mil.br', 'org.br', 'psi.br', 'b.br', 'def.br', 'jus.br', 'leg.br', 'mp.br', 'tc.br'],
-    France: ['avocat.fr', 'aeroport.fr', 'veterinaire.fr', 'gouv.fr'],
-    Hungary: ['2000.hu', 'agrar.hu', 'bolt.hu', 'city.hu', 'co.hu', 'edu.hu', 'film.hu', 'forum.hu', 'games.hu', 'gov.hu', 'hotel.hu', 'info.hu', 'ingatlan.hu', 'jogasz.hu', 'konyvelo.hu', 'lakas.hu', 'media.hu', 'mobi.hu', 'net.hu', 'news.hu', 'org.hu', 'priv.hu', 'reklam.hu', 'shop.hu', 'sport.hu', 'suli.hu', 'tm.hu', 'tozsde.hu', 'utazas.hu', 'video.hu', 'casino.hu', 'erotica.hu', 'erotika.hu', 'sex.hu', 'szex.hu'],
-    New_Zealand: ['ac.nz', 'co.nz', 'geek.nz', 'gen.nz', 'kiwi.nz', 'maori.nz', 'net.nz', 'org.nz', 'school.nz', 'cri.nz', 'govt.nz', 'health.nz', 'iwi.nz', 'mil.nz', 'parliament.nz'],
-    Nigeria: ['com.ng', 'org.ng', 'gov.ng', 'edu.ng', 'net.ng', 'sch.ng', 'name.ng', 'mobi.ng', 'mil.ng', 'i.ng'],
-    Pakistan: ['com.pk', 'org.pk', 'net.pk', 'ac.pk', 'edu.pk', 'res.pk', 'gov.pk', 'mil.pk', 'gok.pk', 'gob.pk', 'gkp.pk', 'gop.pk', 'gos.pk', 'gog.pk', 'ltd.pk', 'web.pk', 'fam.pk', 'biz.pk'],
-    India: ['co.in', 'com.in', 'firm.in', 'net.in', 'org.in', 'gen.in', 'ind.in', 'ernet.in', 'ac.in'],
-    Israel: ['ac.il', 'co.il', 'org.il', 'net.il', 'k12.il', 'gov.il', 'muni.il', 'idf.il'],
-    Japan: ['ac.jp', 'ad.jp', 'co.jp', 'ed.jp', 'go.jp', 'gr.jp', 'lg.jp', 'ne.jp', 'or.jp'],
-    Russia: ['ac.ru', 'com.ru', 'edu.ru', 'gov.ru', 'int.ru', 'mil.ru', 'net.ru', 'org.ru', 'pp.ru'],
-    South_Africa: ['ac.za', 'co.za', 'edu.za', 'gov.za', 'law.za', 'mil.za', 'net.za', 'nom.za', 'org.za', 'school.za'],
-    South_Korea: ['co.kr', 'ne.kr', 'or.kr', 're.kr', 'pe.kr', 'go.kr', 'mil.kr', 'ac.kr', 'hs.kr', 'ms.kr', 'es.kr', 'sc.kr', 'kg.kr', 'seoul.kr', 'busan.kr', 'daegu.kr', 'incheon.kr', 'gwangju.kr', 'daejeon.kr', 'ulsan.kr', 'gyeonggi.kr', 'gangwon.kr', 'chungbuk.kr', 'chungnam.kr', 'jeonbuk.kr', 'jeonnam.kr', 'gyeongbuk.kr', 'gyeongnam.kr', 'jeju.kr'],
-    Spain: ['com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es'],
-    Sri_Lanka: ['gov.lk', 'ac.lk', 'sch.lk', 'net.lk', 'int.lk', 'com.lk', 'org.lk', 'edu.lk', 'ngo.lk', 'soc.lk', 'web.lk', 'ltd.lk', 'assn.lk', 'grp.lk', 'hotel.lk'],
-    Thailand: ['ac.th', 'co.th', 'go.th', 'mi.th', 'or.th', 'net.th', 'in.th'],
-    Trinidad_and_Tobago: ['co.tt', 'com.tt', 'org.tt', 'net.tt', 'travel.tt', 'museum.tt', 'aero.tt', 'tel.tt', 'name.tt', 'charity.tt', 'mil.tt', 'edu.tt', 'gov.tt'],
-    Türkiye: ['gov.tr', 'mil.tr', 'tsk.tr', 'k12.tr', 'edu.tr', 'av.tr', 'dr.tr', 'bel.tr', 'pol.tr', 'kep.tr', 'com.tr', 'net.tr', 'org.tr', 'info.tr', 'bbs.tr', 'nom.tr', 'tv.tr', 'biz.tr', 'tel.tr', 'gen.tr', 'web.tr', 'name.tr'],
-    Ukraine: ['com.ua', 'in.ua', 'org.ua', 'net.ua', 'edu.ua', 'gov.ua'],
-    United_Kingdom: ['ac.uk', 'bl.uk', 'co.uk', 'gov.uk', 'judiciary.uk', 'ltd.uk', 'me.uk', 'mod.uk', 'net.uk', 'nhs.uk', 'nic.uk', 'org.uk', 'parliament.uk', 'plc.uk', 'police.uk', 'rct.uk', 'royal.uk', 'sch.uk', 'ukaea.uk'],
-    United_States: ['ak.gov', 'al.gov', 'ar.gov', 'az.gov', 'ca.gov', 'co.gov', 'ct.gov', 'de.gov', 'fl.gov', 'ga.gov', 'hi.gov', 'ia.gov', 'id.gov', 'il.gov', 'in.gov', 'ks.gov', 'ky.gov', 'la.gov', 'ma.gov', 'md.gov', 'me.gov', 'mi.gov', 'mn.gov', 'mo.gov', 'ms.gov', 'mt.gov', 'nc.gov', 'nd.gov', 'ne.gov', 'nh.gov', 'nj.gov', 'nm.gov', 'nv.gov', 'ny.gov', 'oh.gov', 'ok.gov', 'or.gov', 'pa.gov', 'ri.gov', 'sc.gov', 'sd.gov', 'tn.gov', 'tx.gov', 'ut.gov', 'va.gov', 'vt.gov', 'wa.gov', 'wi.gov', 'wv.gov', 'wy.gov'],
-};
-
-/**
- * Extracts the main domain from a full domain
- * Handles special second-level domains correctly
- * @param {string} domain - Full domain to extract from
- * @returns {string} Main domain
- */
-function getMainDomain(domain) {
-    if (!domain) return '';
-    
-    try {
-        const parts = domain.split('.').filter(part => part && part !== 'www');
-        if (parts.length < 2) return domain;
-        
-        const lastTwoParts = parts.slice(-2).join('.');
-
-        // Check if domain has a special SLD pattern
-        for (const country in specialSLDs) {
-            if (specialSLDs[country].includes(lastTwoParts)) {
-                return parts.slice(-3).join('.');
-            }
-        }
-        
-        // Default domain extraction
-        return parts.slice(numLevels).join('.');
-    } catch (error) {
-        console.error('Error extracting main domain:', error);
-        return domain; // Return original domain as fallback
-    }
-}
+// getMainDomain(), numLevels and specialSLDs live in common.js — shared with
+// background.js so the popup's domain grouping and the badge's cookie count
+// always agree on what counts as the same site.
 
 /**
  * Checks if one domain is a subdomain of another
@@ -1460,17 +1253,18 @@ function isDomainOrSubdomain(domain1, domain2) {
 
 /**
  * Filters cookies associated with closed tabs
+ * Builds the set of open-tab main domains once instead of re-scanning every
+ * open tab's URL for every cookie, and compares main-domain-to-main-domain
+ * instead of a raw substring check (the old `tabUrl.includes(cookieDomain)`
+ * could also false-positive — e.g. a tab on "notexample.com" would count as
+ * still "open" for a cookie on "example.com").
  * @param {Array} cookies - Array of cookie objects
- * @param {Array} openTabUrls - Array of URLs from open tabs
+ * @param {Array} openTabUrls - Array of hostnames from open tabs
  * @returns {Array} Array of cookies from closed tabs
  */
 function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
-    return cookies.filter(cookie => {
-        const cookieDomain = getMainDomain(cookie.domain);
-        return !openTabUrls.some(tabUrl => 
-            tabUrl && tabUrl.includes(cookieDomain)
-        );
-    });
+    const openTabDomains = new Set(openTabUrls.filter(Boolean).map(getMainDomain));
+    return cookies.filter(cookie => !openTabDomains.has(getMainDomain(cookie.domain)));
 }
 
 /**

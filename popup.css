@@ -58,7 +58,10 @@ body {
     max-height: 500px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 3px 20px 4px 1px;
+    /* No padding: rows go edge-to-edge so their hover highlight fills the
+       full popup width (and the first row's) instead of floating as a
+       boxed chip with a gap above it. */
+    padding: 0;
     flex-grow: 1;
     position: relative;
 }
@@ -72,22 +75,16 @@ body {
     text-align: left;
     color: var(--text-color);
     white-space: nowrap;
-    border-radius: 4px;
     position: relative;
-    will-change: background-color, transform;
-    margin-left: 0;
-    margin-right: -15px;
-    padding: 3px 25px 3px 10px;
+    will-change: background-color;
+    padding: 3px 20px;
     font-size: 13.5px;
     line-height: 1.3;
-    transition: background-color 0.15s ease, transform 0.15s ease;
+    transition: background-color 0.15s ease;
 }
 
 .cookie-item:hover {
     background-color: var(--hover-highlight);
-    transform: translateX(2px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    border-radius: 4px;
     cursor: pointer;
 }
 
@@ -200,7 +197,10 @@ body {
     width: 14px;
     height: 14px;
     vertical-align: bottom;
-    margin-left: 2px;
+    /* No margin: the row's flex `gap` already spaces every child evenly —
+       adding margin on top of it (and a literal space character, removed in
+       appendIcon()) was double-spacing icons apart from each other. */
+    margin-left: 0;
 }
 
 .separator {

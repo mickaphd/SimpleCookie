@@ -54,25 +54,8 @@ function showMessage(message, isError = false) {
 
 // ==================== SETTINGS MANAGEMENT ====================
 
-// Default settings
-const defaultSettings = {
-    enableGhostIcon: true,
-    enableActiveTabHighlight: true,
-    enableSpecialJarIcon: true,
-    enablePartitionIcon: true,
-    mycleanerCookies: false,
-    mycleanerBrowsingHistory: true,
-    mycleanerCache: false,
-    mycleanerAutofill: false,
-    mycleanerDownloadHistory: true,
-    mycleanerService: false,
-    mycleanerPlugin: false,
-    mycleanerLocal: false,
-    mycleanerIndexed: false,
-    mycleanerPasswords: false,
-    OpenTabsTop: false,
-    showCookieCountBadge: true
-};
+// Default settings live in common.js (DEFAULT_SETTINGS) so popup.js and
+// settings.js can never disagree about what a "default" is.
 
 /**
  * Saves settings to browser storage
@@ -87,11 +70,11 @@ const saveSettings = settings => browser.storage.local.set(settings);
  */
 async function loadSettings() {
     try {
-        const settings = await browser.storage.local.get(Object.keys(defaultSettings));
-        return { ...defaultSettings, ...settings };
+        const settings = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
+        return { ...DEFAULT_SETTINGS, ...settings };
     } catch (error) {
         console.error('Error loading settings:', error);
-        return defaultSettings;
+        return DEFAULT_SETTINGS;
     }
 }
 
@@ -123,13 +106,40 @@ async function initializeSettings() {
                     sniperData.sniperDomains.join(', ') : '';
                 
                 sniperDomainsElement.addEventListener('change', async function() {
-                    const domains = this.value.split(',')
+                    const entries = this.value.split(',')
                         .map(d => d.trim().toLowerCase())
                         .filter(d => d);
+
+                    // Keywords that are too short would match an unreasonable
+                    // number of unrelated domains (see MIN_SNIPER_KEYWORD_LENGTH
+                    // in common.js) — drop them rather than silently nuking cookies
+                    // no one meant to touch.
+                    const domains = entries.filter(d => d.length >= MIN_SNIPER_KEYWORD_LENGTH);
+                    const ignoredCount = entries.length - domains.length;
+
+                    // Saving is all this page does — background.js reacts to this
+                    // storage change to sweep away any cookies those keywords
+                    // already match, and to auto-delete new ones as they appear.
                     await browser.storage.local.set({ sniperDomains: domains });
+
+                    if (ignoredCount > 0) {
+                        // Still say what WAS saved and is now active — otherwise a
+                        // user seeing only the "ignored" warning could reasonably
+                        // assume nothing happened, when the rest was in fact saved.
+                        const ignoredNote = `${ignoredCount} keyword${ignoredCount > 1 ? 's were' : ' was'} shorter than ${MIN_SNIPER_KEYWORD_LENGTH} characters and ignored.`;
+                        const savedNote = domains.length > 0
+                            ? ` The rest is active: ${domains.join(', ')}.`
+                            : ' Nothing else was saved.';
+                        showMessage(ignoredNote + savedNote, true);
+                    } else {
+                        showMessage(domains.length > 0
+                            ? `mySniper will now auto-delete cookies from any domain containing: ${domains.join(', ')}.`
+                            : 'mySniper list cleared — those keywords are no longer auto-cleaned.');
+                    }
                 });
             } catch (error) {
                 console.error('Error handling sniper domains:', error);
+                showMessage('Failed to load your mySniper list', true);
             }
         }
     } catch (error) {
@@ -141,48 +151,16 @@ async function initializeSettings() {
 
 // ==================== COOKIE MANAGEMENT ====================
 
+// fetchAllCookies() lives in common.js — shared with popup.js so both
+// pages fetch and de-duplicate cookies (including partitioned/CHIPS ones)
+// exactly the same way.
+
 /**
- * Fetches all cookies from all containers avoiding duplicates
- * @returns {Promise<Array>} Promise resolving to array of unique cookies
+ * Pluralizes "cookie" for a given count
+ * @param {number} count
+ * @returns {string} "cookie" or "cookies"
  */
-async function fetchAllCookies() {
-    try {
-        // Fetch all containers
-        const containers = await browser.contextualIdentities.query({});
-        const cookiePromises = [];
-        
-        // Get all store IDs (containers + default)
-        const storeIds = [...containers.map(container => container.cookieStoreId), ""];
-        
-        // For each store ID, fetch both normal and partitioned cookies
-        storeIds.forEach(storeId => {
-            // Normal cookies
-            cookiePromises.push(browser.cookies.getAll({ storeId }));
-            // Partitioned cookies
-            cookiePromises.push(browser.cookies.getAll({ storeId, partitionKey: {} }));
-        });
-        
-        // Wait for all promises to resolve and flatten the result
-        const allCookies = (await Promise.all(cookiePromises)).flat();
-        
-        // More efficient way to filter duplicates
-        const uniqueMap = new Map();
-        
-        allCookies.forEach(cookie => {
-            // Create a shorter unique key for each cookie
-            const key = `${cookie.name}|${cookie.domain}|${cookie.path}|${cookie.storeId}|${cookie.partitionKey ? 'p' : 'n'}`;
-            
-            if (!uniqueMap.has(key)) {
-                uniqueMap.set(key, cookie);
-            }
-        });
-        
-        return Array.from(uniqueMap.values());
-    } catch (error) {
-        console.error('Error fetching cookies:', error);
-        return [];
-    }
-}
+const cookieWord = count => count === 1 ? 'cookie' : 'cookies';
 
 /**
  * Exports all cookies to a JSON file
@@ -229,7 +207,7 @@ async function exportAllCookies() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        showMessage(`Successfully exported ${allCookies.length} cookies!`);
+        showMessage(`Successfully exported ${allCookies.length} ${cookieWord(allCookies.length)}!`);
     } catch (error) {
         console.error('Error exporting cookies:', error);
         showMessage(`Error exporting cookies: ${error.message}`, true);
@@ -249,10 +227,22 @@ async function importCookies() {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => {
+            console.error('Error reading cookie file:', reader.error);
+            showMessage("Couldn't read that file — it may have moved, or you may not have permission to read it.", true);
+        };
         reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                const cookies = data.cookies || [];
+
+                // A missing/non-array `cookies` field means this almost
+                // certainly isn't a SimpleCookie export at all — treat it as
+                // a parse error rather than silently "importing" 0 cookies
+                // and reporting that as a success.
+                if (!Array.isArray(data.cookies)) {
+                    throw new Error("This doesn't look like a SimpleCookie export file — no cookies array found.");
+                }
+                const cookies = data.cookies;
                 let importCount = 0;
                 let errorCount = 0;
 
@@ -297,9 +287,16 @@ async function importCookies() {
                 }
 
                 if (errorCount === 0) {
-                    showMessage(`Successfully imported ${importCount} cookies!`);
+                    showMessage(`Successfully imported ${importCount} ${cookieWord(importCount)}!`);
                 } else {
-                    showMessage(`Imported ${importCount} cookies, but ${errorCount} cookies couldn't be imported.`, errorCount === cookies.length);
+                    // Red "error" styling once failures are the majority (including
+                    // a 100% failure); a mostly-successful import still mentions the
+                    // failures in the text, but isn't flagged as if it mostly failed.
+                    const isMostlyFailed = errorCount >= importCount;
+                    showMessage(
+                        `Imported ${importCount} ${cookieWord(importCount)}, but ${errorCount} couldn't be imported.`,
+                        isMostlyFailed
+                    );
                 }
             } catch (error) {
                 console.error('Error parsing cookie file:', error);
@@ -315,12 +312,12 @@ async function importCookies() {
 // ==================== RESET FUNCTIONALITY ====================
 
 /**
- * Resets all settings and favorites to defaults
+ * Resets all settings, favorites, and the mySniper keyword list to defaults
  */
 async function resetSettingsAndFavorites() {
     try {
         await browser.storage.local.clear();
-        showMessage('Settings and favorites have been reset successfully!');
+        showMessage('Settings, favorites, and your mySniper list have been reset successfully!');
         setTimeout(() => {
             window.location.reload();
         }, 1500);
@@ -355,8 +352,17 @@ document.getElementById('closeMessage')?.addEventListener('click', function() {
     document.getElementById('messageBox').style.display = 'none';
 });
 
-// Reset button
-document.getElementById('resetButton')?.addEventListener('click', resetSettingsAndFavorites);
+// Reset button — this is a destructive, irreversible action (it also wipes
+// the mySniper keyword list, not just favorites/settings), so confirm first
+// rather than acting on a single misclick of a plain link.
+document.getElementById('resetButton')?.addEventListener('click', async () => {
+    const confirmed = window.confirm(
+        'Reset all settings, favorites, and your mySniper keyword list back to factory defaults? This cannot be undone.'
+    );
+    if (confirmed) {
+        await resetSettingsAndFavorites();
+    }
+});
 
 // Export and import buttons
 document.getElementById('exportCookies')?.addEventListener('click', exportAllCookies);

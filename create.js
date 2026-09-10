@@ -4,7 +4,6 @@
 // ==================== CONSTANTS ====================
 
 const MESSAGE_DISPLAY_DURATION = 5000; // ms
-const CONTAINER_LOAD_DELAY = 100; // ms
 
 // ==================== THEME MANAGEMENT ====================
 
@@ -75,7 +74,7 @@ function isValidDomain(domain) {
     if (domain === 'localhost') return true;
     
     const domainToCheck = domain.startsWith('.') ? domain.substring(1) : domain;
-    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return domainRegex.test(domainToCheck) && domainToCheck.includes('.');
 }
 
@@ -93,7 +92,7 @@ function parseExpirationDate(dateString) {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }
         
-        const dateRegex = /(\\d{1,2})\\s+([A-Za-z]{3,})\\s+(\\d{4})/;
+        const dateRegex = /(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/;
         const match = dateString.match(dateRegex);
         
         if (match) {
@@ -182,20 +181,24 @@ function populateFormFromQueryParams() {
         }
         
         if (cookieData.container) {
-            setTimeout(() => {
-                const storeIdSelect = document.getElementById('storeId');
-                if (storeIdSelect) {
-                    const containerValue = cookieData.container.startsWith('firefox-') ? 
-                        cookieData.container : `firefox-${cookieData.container}`;
-                    for (const option of storeIdSelect.options) {
-                        if (option.value === containerValue || 
-                            option.textContent.toLowerCase() === cookieData.container.toLowerCase()) {
-                            option.selected = true;
-                            break;
-                        }
+            // No setTimeout needed here: populateContainerDropdown() is awaited
+            // before this function runs (see the DOMContentLoaded handler below),
+            // so the <select> is already fully populated — a deferred selection
+            // only opened a race window where a fast submit could read the
+            // still-default option, or a manual container change made by the
+            // user in that window could get silently overwritten back.
+            const storeIdSelect = document.getElementById('storeId');
+            if (storeIdSelect) {
+                const containerValue = cookieData.container.startsWith('firefox-') ?
+                    cookieData.container : `firefox-${cookieData.container}`;
+                for (const option of storeIdSelect.options) {
+                    if (option.value === containerValue ||
+                        option.textContent.toLowerCase() === cookieData.container.toLowerCase()) {
+                        option.selected = true;
+                        break;
                     }
                 }
-            }, CONTAINER_LOAD_DELAY);
+            }
         }
         
         if (cookieData.firstPartyDomain) {
@@ -248,42 +251,14 @@ async function createCookie(event) {
         const secure = document.getElementById('secure')?.value === 'true';
         const httpOnly = document.getElementById('httpOnly')?.value === 'true';
         const sameSite = document.getElementById('sameSite')?.value || 'no_restriction';
-        
-        // Remove original cookie if editing
-        if (isEditing) {
-            try {
-                const originalData = window.originalCookieData;
-                const domainToUse = originalData.domain || '';
-                const urlDomain = domainToUse.startsWith('.') ? domainToUse.substring(1) : domainToUse;
-                const removalUrl = `http${originalData.secure ? 's' : ''}://${urlDomain}${originalData.path}`;
-                
-                const removeOptions = {
-                    url: removalUrl,
-                    name: originalData.name,
-                    domain: domainToUse || undefined,
-                    path: originalData.path || '/',
-                };
-                
-                if (originalData.container && originalData.container !== 'default') {
-                    const containerId = originalData.container;
-                    removeOptions.storeId = containerId.startsWith('firefox-') ? 
-                        containerId : `firefox-${containerId}`;
-                }
-                
-                if (originalData.partition) {
-                    let topLevelSite = originalData.partition;
-                    if (!topLevelSite.startsWith('http://') && !topLevelSite.startsWith('https://')) {
-                        topLevelSite = 'https://' + topLevelSite;
-                    }
-                    removeOptions.partitionKey = { topLevelSite };
-                }
-                
-                await browser.cookies.remove(removeOptions);
-            } catch (error) {
-                console.error('Error removing original cookie:', error);
-            }
+
+        // Firefox rejects SameSite=None without Secure — check it here with a
+        // specific message rather than letting cookies.set() reject it below
+        // with only the generic "the browser may have rejected it" error.
+        if (sameSite === 'no_restriction' && !secure) {
+            throw new Error("SameSite 'None' requires Secure to be 'Yes' — either set Secure to Yes, or choose Lax/Strict.");
         }
-        
+
         // Create the cookie
         const urlDomain = domain.startsWith('.') ? domain.substring(1) : domain;
         const url = `http${secure ? 's' : ''}://${urlDomain}${path}`;
@@ -313,9 +288,11 @@ async function createCookie(event) {
             cookieData.partitionKey = { topLevelSite };
         }
         
-        // Add store ID if specified
+        // Add store ID if specified (the default-container option's own value
+        // is the string 'firefox-default', never the bare word 'default' — so
+        // this only ever omits storeId when the select is somehow empty)
         const storeId = document.getElementById('storeId')?.value.trim();
-        if (storeId && storeId !== 'default') {
+        if (storeId && storeId !== 'firefox-default') {
             cookieData.storeId = storeId;
         }
         
@@ -334,12 +311,90 @@ async function createCookie(event) {
             }
         }
         
+        // When editing, work out whether this is really a different cookie
+        // identity (name/domain/path/container/partition) or just a value/flag
+        // change to the same one. Firefox identifies a cookie by exactly those
+        // fields, so cookies.set() below already overwrites it in place when
+        // the identity is unchanged — removing the "original" afterward in
+        // that case would just delete the cookie this call created.
+        let originalIdentityChanged = false;
+        let originalData = null;
+        if (isEditing) {
+            originalData = window.originalCookieData;
+            const newStoredDomain = wantHostOnly ? urlDomain : domain;
+            const newStoreId = storeId || 'firefox-default';
+            const newTopLevelSite = cookieData.partitionKey?.topLevelSite || '';
+            const newFirstPartyDomain = firstPartyDomain || '';
+
+            const originalStoreId = (originalData.container && originalData.container !== 'default')
+                ? (originalData.container.startsWith('firefox-') ? originalData.container : `firefox-${originalData.container}`)
+                : 'firefox-default';
+            let originalTopLevelSite = '';
+            if (originalData.partition) {
+                originalTopLevelSite = originalData.partition.startsWith('http://') || originalData.partition.startsWith('https://')
+                    ? originalData.partition
+                    : 'https://' + originalData.partition;
+            }
+
+            originalIdentityChanged = (
+                originalData.name !== name ||
+                originalData.domain !== newStoredDomain ||
+                originalData.path !== path ||
+                originalStoreId !== newStoreId ||
+                originalTopLevelSite !== newTopLevelSite ||
+                (originalData.firstPartyDomain || '') !== newFirstPartyDomain
+            );
+        }
+
+        // Create (or in-place overwrite) the cookie first. If this throws,
+        // nothing has been touched yet — the original, if any, is untouched.
         const result = await browser.cookies.set(cookieData);
-        
+
         if (!result) {
             throw new Error('Failed to set cookie. The browser may have rejected it.');
         }
-        
+
+        // Only now, with the replacement confirmed to exist, clean up the
+        // original — and only when its identity actually differs. A failure
+        // here is a harmless leftover duplicate (findable and deletable from
+        // the popup), never data loss, so it's logged but doesn't affect the
+        // success message below.
+        if (isEditing && originalIdentityChanged) {
+            try {
+                const domainToUse = originalData.domain || '';
+                const originalUrlDomain = domainToUse.startsWith('.') ? domainToUse.substring(1) : domainToUse;
+                const removalUrl = `http${originalData.secure ? 's' : ''}://${originalUrlDomain}${originalData.path}`;
+
+                const removeOptions = {
+                    url: removalUrl,
+                    name: originalData.name,
+                    path: originalData.path || '/',
+                };
+
+                if (originalData.container && originalData.container !== 'default') {
+                    const containerId = originalData.container;
+                    removeOptions.storeId = containerId.startsWith('firefox-') ?
+                        containerId : `firefox-${containerId}`;
+                }
+
+                if (originalData.partition) {
+                    let topLevelSite = originalData.partition;
+                    if (!topLevelSite.startsWith('http://') && !topLevelSite.startsWith('https://')) {
+                        topLevelSite = 'https://' + topLevelSite;
+                    }
+                    removeOptions.partitionKey = { topLevelSite };
+                }
+
+                if (originalData.firstPartyDomain) {
+                    removeOptions.firstPartyDomain = originalData.firstPartyDomain;
+                }
+
+                await browser.cookies.remove(removeOptions);
+            } catch (error) {
+                console.error('Error removing original cookie after edit (a leftover duplicate may remain):', error);
+            }
+        }
+
         const successMessage = isEditing ? 'Cookie updated successfully!' : 'Cookie created successfully!';
         showMessage(successMessage);
         
