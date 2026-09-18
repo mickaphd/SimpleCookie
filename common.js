@@ -198,6 +198,15 @@ function cookieMatchesSniperDomain(cookie, keyword) {
 }
 
 
+// ==================== KEYBOARD SHORTCUT ====================
+
+// Name of the single command declared in manifest.json's "commands" key.
+// Shared by background.js (listens for it) and settings.js (reads/writes
+// its key combination via browser.commands), so the two can't drift apart
+// on what the command is actually called.
+const SHORTCUT_COMMAND_NAME = 'trigger-action';
+
+
 // ==================== SETTINGS DEFAULTS ====================
 
 /**
@@ -222,5 +231,6 @@ const DEFAULT_SETTINGS = {
     mycleanerIndexed: false,
     mycleanerPasswords: false,
     OpenTabsTop: false,
-    showCookieCountBadge: true
+    showCookieCountBadge: true,
+    shortcutAction: 'openPopup'
 };

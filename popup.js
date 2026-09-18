@@ -394,10 +394,9 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
     }
 
     // Create and append DOM elements for each domain entry
-    domainsArray.forEach(([website, info], index) => {
+    domainsArray.forEach(([website, info]) => {
         const element = document.createElement('div');
         element.className = 'cookie-item';
-        element.dataset.index = index;
         element.dataset.domain = website;
         element.textContent = `${website} (${info.count})`;
         element.title = `Left-click to delete all cookies for ${website}; right-click for detailed cookie information; press Command on macOS or Ctrl on PC to use the Tab Switcher function for the open tabs.`;
@@ -407,8 +406,6 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
         star.src = favorites.includes(website) ? 'resources/star_full.svg' : 'resources/star_empty.svg';
         star.alt = 'Favorite Star Icon';
         star.className = 'star-icon';
-        star.dataset.website = website;
-        star.dataset.index = index;
 
         star.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -488,10 +485,9 @@ function highlightActiveTabDomain() {
         container.querySelector('.active-tab-icon')?.remove();
 
         // Find the element for the active domain
-        const activeElement = Array.from(container.childNodes).find(element => {
-            const elementText = element.textContent.trim().split(' ')[0];
-            return elementText && getMainDomain(elementText) === activeDomain;
-        });
+        const activeElement = Array.from(container.children).find(element =>
+            getMainDomain(element.dataset.domain) === activeDomain
+        );
 
         if (activeElement) {
             const icon = document.createElement('img');
@@ -528,7 +524,7 @@ function highlightOpenTabDomains(isKeyPressed) {
 
     // Loop through all domain elements
     Array.from(container.children).forEach(element => {
-        const website = element.textContent.split(' ')[0];
+        const website = element.dataset.domain;
         const mainDomain = getMainDomain(website);
 
         if (openTabDomains.has(mainDomain)) {
@@ -798,7 +794,11 @@ async function deleteCookie(cookie) {
     if (isFavorite) return; // Skip deletion for favorites
 
     const cookieUrl = getCookieUrl(cookie);
-    const storeId = cookie.storeId || '0';
+    // 'firefox-default', not '0' (that's Chrome's convention) — matches
+    // Firefox's actual store id. cookie.storeId is always set in practice
+    // (every cookie here comes from fetchAllCookies(), which the cookies API
+    // always populates it for), so this is just a defensive fallback.
+    const storeId = cookie.storeId || 'firefox-default';
 
     try {
         await browser.cookies.remove({
@@ -920,18 +920,6 @@ async function undoLastDeletion() {
 }
 
 /**
- * Removes browsing data based on options
- * @param {Object} options - Browser data types to remove
- */
-async function removeBrowsingData(options) {
-    try {
-        await browser.browsingData.remove({ since: 0 }, options);
-    } catch (error) {
-        console.error('Error removing browsing data:', error);
-    }
-}
-
-/**
  * Cleans browsing data based on user settings
  * Called when user clicks the myCleaner icon
  */
@@ -979,6 +967,98 @@ async function myCleaner() {
 }
 
 
+// ==================== DOCK ACTIONS ====================
+
+// Each of these is the exact body that used to live inline in its icon's
+// click listener (see EVENT LISTENERS below). Pulling them out means the
+// keyboard shortcut (see runPendingShortcutAction()) can trigger the same
+// confirmation modal + Undo flow as a manual click, instead of needing its
+// own separate, unconfirmed deletion path in background.js.
+
+/**
+ * Deletes cookies from closed tabs — same action as clicking icon1.
+ */
+async function runDeleteClosedTabsCookiesAction() {
+    if (!hasCookiesToDelete()) return;
+    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
+    const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
+    if (cookiesAssociatedWithClosedTabs.length === 0) return;
+
+    const userConfirmed = await showConfirmationModal();
+    if (userConfirmed) {
+        await withBusyGuard(async () => {
+            await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
+            await updateDisplay();
+        });
+    }
+}
+
+/**
+ * Deletes all cookies except favorites — same action as clicking icon2.
+ */
+async function runDeleteAllCookiesAction() {
+    if (!hasCookiesToDelete()) return;
+    const favoriteDomains = new Set(favorites.map(getMainDomain));
+    const cookiesToDelete = cookies.filter(cookie => !favoriteDomains.has(getMainDomain(cookie.domain)));
+    if (cookiesToDelete.length === 0) return;
+
+    const userConfirmed = await showConfirmationModal();
+    if (userConfirmed) {
+        await withBusyGuard(async () => {
+            await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
+            await updateDisplay();
+        });
+    }
+}
+
+/**
+ * Runs myCleaner — same action as clicking icon3.
+ */
+async function runMyCleanerAction() {
+    if (!hasCookiesToDelete()) return;
+    const userConfirmed = await showConfirmationModal();
+    if (userConfirmed) {
+        await withBusyGuard(async () => {
+            await myCleaner();
+            await updateDisplay();
+        });
+    }
+}
+
+/**
+ * Runs the dock action the keyboard shortcut was configured for (see the
+ * "Keyboard shortcut" section in settings.js), if background.js left one
+ * pending. background.js can't show the confirmation modal or arm Undo
+ * itself — there's no popup UI open yet when the shortcut fires — so it
+ * just opens the popup and stashes which action to run; this consumes that
+ * flag once, right after the popup finishes loading, and runs the exact
+ * same function a manual icon click would.
+ */
+async function runPendingShortcutAction() {
+    try {
+        const { pendingShortcutAction } = await browser.storage.local.get('pendingShortcutAction');
+        if (!pendingShortcutAction) return;
+
+        // Consume the flag before acting on it: a failure below shouldn't
+        // leave it behind to fire again (unconfirmed) the next time the
+        // popup happens to open.
+        await browser.storage.local.remove('pendingShortcutAction');
+
+        // Each of these already guards itself with withBusyGuard — no need
+        // to wrap this dispatch in another one too.
+        if (pendingShortcutAction === 'deleteClosedTabsCookies') {
+            await runDeleteClosedTabsCookiesAction();
+        } else if (pendingShortcutAction === 'deleteAllCookies') {
+            await runDeleteAllCookiesAction();
+        } else if (pendingShortcutAction === 'myCleaner') {
+            await runMyCleanerAction();
+        }
+    } catch (error) {
+        console.error('Error running pending shortcut action:', error);
+    }
+}
+
+
 // ==================== EVENT LISTENERS ====================
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -992,6 +1072,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
         
         await initExtension();
+
+        // If the popup was opened by the keyboard shortcut for a dock action
+        // (rather than a normal click), run that action now — see
+        // background.js's commands.onCommand listener and
+        // runPendingShortcutAction()'s own comment for why this can't just
+        // happen headlessly in the background instead.
+        await runPendingShortcutAction();
+
         const cookiesContainer = document.getElementById('cookies-container');
         
         let isModifierPressed = false;
@@ -1016,15 +1104,25 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Event listener for the cookie container click events
         cookiesContainer?.addEventListener('click', async (event) => {
             if (event.target.nodeName === 'DIV') {
-                const website = event.target.textContent.split(' ')[0];
+                const website = event.target.dataset.domain;
                 event.preventDefault();
-                
+
                 // First check if modifier key is currently pressed
                 if (isModifierPressed) {
-                    // Get the color to determine if it's an open tab (green)
-                    const color = window.getComputedStyle(event.target).color;
-                    const isGreenDomain = color === 'rgb(5, 165, 93)' || color === '#05A55D';
-                    
+                    // Check open-tab membership directly instead of reading back the
+                    // rendered CSS color: getComputedStyle() always normalizes to
+                    // rgb(), so the old '#05A55D' half of this check could never
+                    // match, and inferring state from a painted color is more
+                    // fragile than just asking the data.
+                    const openTabDomains = new Set(tabs.map(({ url }) => {
+                        try {
+                            return getMainDomain(new URL(url).hostname);
+                        } catch {
+                            return '';
+                        }
+                    }).filter(Boolean));
+                    const isGreenDomain = openTabDomains.has(getMainDomain(website));
+
                     if (isGreenDomain) {
                         await navigateToTab(website);
                         return;
@@ -1048,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         cookiesContainer?.addEventListener('contextmenu', async (event) => {
             try {
                 if (event.target.nodeName === 'DIV') {
-                    const website = event.target.textContent.split(' ')[0];
+                    const website = event.target.dataset.domain;
                     event.preventDefault();
                     await displayCookieDetails(website, cookies);
                 }
@@ -1065,18 +1163,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Event listener for the icon1 to delete cookies associated with closed tabs
         icon1?.addEventListener('click', async () => {
             try {
-                if (!hasCookiesToDelete()) return;
-                const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-                const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-                if (cookiesAssociatedWithClosedTabs.length === 0) return;
-
-                const userConfirmed = await showConfirmationModal();
-                if (userConfirmed) {
-                    await withBusyGuard(async () => {
-                        await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
-                        await updateDisplay();
-                    });
-                }
+                await runDeleteClosedTabsCookiesAction();
             } catch (error) {
                 console.error('Error in icon1 click handler:', error);
             }
@@ -1085,18 +1172,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Event listener for the icon2 to delete all cookies except favorites
         icon2?.addEventListener('click', async () => {
             try {
-                if (!hasCookiesToDelete()) return;
-                const favoriteDomains = new Set(favorites.map(getMainDomain));
-                const cookiesToDelete = cookies.filter(cookie => !favoriteDomains.has(getMainDomain(cookie.domain)));
-                if (cookiesToDelete.length === 0) return;
-
-                const userConfirmed = await showConfirmationModal();
-                if (userConfirmed) {
-                    await withBusyGuard(async () => {
-                        await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
-                        await updateDisplay();
-                    });
-                }
+                await runDeleteAllCookiesAction();
             } catch (error) {
                 console.error('Error in icon2 click handler:', error);
             }
@@ -1105,14 +1181,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Event listener for the icon3 to trigger the myCleaner function
         icon3?.addEventListener('click', async () => {
             try {
-                if (!hasCookiesToDelete()) return;
-                const userConfirmed = await showConfirmationModal();
-                if (userConfirmed) {
-                    await withBusyGuard(async () => {
-                        await myCleaner();
-                        await updateDisplay();
-                    });
-                }
+                await runMyCleanerAction();
             } catch (error) {
                 console.error('Error in icon3 click handler:', error);
             }
@@ -1197,6 +1266,7 @@ function showConfirmationModal() {
             yesButton.removeEventListener('click', handleYes);
             noButton.removeEventListener('click', handleNo);
             window.removeEventListener('click', handleClickOutside);
+            document.removeEventListener('keydown', handleKeydown, true);
         };
 
         const handleYes = () => handleResponse(true);
@@ -1210,6 +1280,25 @@ function showConfirmationModal() {
         };
 
         window.addEventListener('click', handleClickOutside);
+
+        // Same convention as the browser's own confirm()/alert() dialogs on
+        // both Mac and Windows: Enter approves. Escape is the standard
+        // cross-platform "back out" key, and Backspace/Delete are added
+        // alongside it (rather than as an alternate approve key) — a stray
+        // press of either is far safer misread as "cancel" than as "go ahead
+        // and delete", especially right after typing something. Capture
+        // phase so this always wins even if focus landed somewhere odd.
+        const handleKeydown = (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleResponse(true);
+            } else if (event.key === 'Escape' || event.key === 'Backspace' || event.key === 'Delete') {
+                event.preventDefault();
+                handleResponse(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeydown, true);
     });
 }
 
@@ -1221,30 +1310,23 @@ function showConfirmationModal() {
 // always agree on what counts as the same site.
 
 /**
- * Checks if one domain is a subdomain of another
+ * Checks whether two domains belong to the same site (same main domain).
+ * navigateToTab() — its only caller — already passes in domains that went
+ * through getMainDomain() first, so this used to also carry a right-to-left
+ * segment-by-segment fallback for a genuine "is domain1 a subdomain of
+ * domain2" check; with both inputs already reduced to their main domain,
+ * that fallback could never actually fire, so it's gone. getMainDomain() is
+ * still applied here (not a bare ===) so this stays correct if a future
+ * caller ever passes a raw hostname instead of an already-reduced one.
  * @param {string} domain1 - First domain
  * @param {string} domain2 - Second domain
- * @returns {boolean} True if domains match or one is subdomain of the other
+ * @returns {boolean} True if both domains share the same main domain
  */
 function isDomainOrSubdomain(domain1, domain2) {
     if (!domain1 || !domain2) return false;
-    
-    try {
-        const mainDomain1 = getMainDomain(domain1);
-        const mainDomain2 = getMainDomain(domain2);
-        
-        // Quick check for main domain match
-        if (mainDomain1 === mainDomain2) return true;
 
-        // Check domain parts from right to left
-        const parts1 = domain1.split('.').reverse();
-        const parts2 = domain2.split('.').reverse();
-        
-        for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
-            if (parts1[i] !== parts2[i]) return false;
-        }
-        
-        return true;
+    try {
+        return getMainDomain(domain1) === getMainDomain(domain2);
     } catch (error) {
         console.error('Error checking domain relationship:', error);
         return false;

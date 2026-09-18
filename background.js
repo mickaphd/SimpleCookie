@@ -20,6 +20,13 @@ let badgeUpdateMaxWaitTimeout = null; // Forces a flush during a sustained burst
 let cachedSniperDomains = [];
 let cachedFavorites = [];
 
+// Derived from cachedFavorites, kept alongside it: enforceSniperOnCookie()
+// below runs on every single cookie write in the browser, and used to remap
+// cachedFavorites through getMainDomain() from scratch on every one of those
+// calls even though favorites only actually change on a storage write. This
+// is recomputed only where cachedFavorites itself is (re)assigned below.
+let cachedFavoriteMainDomains = new Set();
+
 // Bumped every time cachedSniperDomains/cachedFavorites are written, so the
 // slow initial storage read in initializeBackground() below can tell whether
 // a faster, more recent write (from storage.onChanged, e.g. the user saving
@@ -62,6 +69,7 @@ function initializeBackground() {
                 // Nothing fresher landed while this read was in flight — safe to apply.
                 cachedSniperDomains = Array.isArray(stored.sniperDomains) ? stored.sniperDomains : [];
                 cachedFavorites = Array.isArray(stored.favorites) ? stored.favorites : [];
+                cachedFavoriteMainDomains = new Set(cachedFavorites.map(getMainDomain));
             }
 
             // Make sure mySniper's keywords don't already have cookies sitting
@@ -129,6 +137,7 @@ browser.storage.onChanged.addListener(async (changes) => {
     }
     if (changes.favorites) {
         cachedFavorites = Array.isArray(changes.favorites.newValue) ? changes.favorites.newValue : [];
+        cachedFavoriteMainDomains = new Set(cachedFavorites.map(getMainDomain));
         cacheGeneration++;
         // A domain that just lost its favorite status might now need sniping
         // (a domain that just became a favorite needs nothing — enforcement
@@ -139,6 +148,50 @@ browser.storage.onChanged.addListener(async (changes) => {
         cachedSniperDomains = Array.isArray(changes.sniperDomains.newValue) ? changes.sniperDomains.newValue : [];
         cacheGeneration++;
         await sweepSniperDomains(cachedSniperDomains);
+    }
+});
+
+/**
+ * Listen for the single user-configurable keyboard shortcut (see
+ * manifest.json's "commands" key and settings.js's Keyboard Shortcut
+ * section, which is what actually assigns/changes the key combination via
+ * browser.commands.update()). This only decides WHICH action to run —
+ * the key combination itself lives entirely in Firefox's own commands
+ * storage, not in browser.storage.local.
+ */
+browser.commands.onCommand.addListener(async (command) => {
+    if (command !== SHORTCUT_COMMAND_NAME) return;
+
+    try {
+        // Treat the shortcut as a toggle: since every one of the 4 possible
+        // actions opens the popup (even the 3 dock actions — see below), if
+        // it's already open, pressing the shortcut again just closes it
+        // instead of doing anything else. Lets you glance at your cookies and
+        // dismiss with the same key combo instead of needing a second one.
+        const openPopupViews = browser.extension.getViews({ type: 'popup' });
+        if (openPopupViews.length > 0) {
+            openPopupViews[0].close();
+            return;
+        }
+
+        const { shortcutAction = DEFAULT_SETTINGS.shortcutAction } = await browser.storage.local.get('shortcutAction');
+
+        if (!shortcutAction || shortcutAction === 'openPopup') {
+            await browser.action.openPopup();
+            return;
+        }
+
+        // The other actions are destructive (they delete cookies), and there's
+        // no popup UI open yet to show the confirmation modal or arm Undo.
+        // Rather than run them headlessly here with no safety net (which would
+        // also mean duplicating popup.js's deletion logic), stash which action
+        // to run and open the popup — popup.js runs it the moment it's done
+        // loading, through the exact same confirm+Undo path as a manual click
+        // (see runPendingShortcutAction() in popup.js).
+        await browser.storage.local.set({ pendingShortcutAction: shortcutAction });
+        await browser.action.openPopup();
+    } catch (error) {
+        console.error('Error handling keyboard shortcut command:', error);
     }
 });
 
@@ -284,11 +337,10 @@ async function sweepSniperDomains(sniperDomains) {
     try {
         if (!Array.isArray(sniperDomains) || sniperDomains.length === 0) return;
 
-        const favoriteDomains = new Set(cachedFavorites.map(getMainDomain));
         const allCookies = await fetchAllCookies();
 
         const cookiesToRemove = allCookies.filter(cookie =>
-            !favoriteDomains.has(getMainDomain(cookie.domain)) &&
+            !cachedFavoriteMainDomains.has(getMainDomain(cookie.domain)) &&
             sniperDomains.some(domain => cookieMatchesSniperDomain(cookie, domain))
         );
 
@@ -310,8 +362,9 @@ async function sweepSniperDomains(sniperDomains) {
  * The real enforcement mechanism: as soon as a cookie whose domain matches a
  * mySniper keyword is set (and it isn't a favorite), remove it again
  * immediately. Runs on every cookie write in the entire browser, so it reads
- * only the in-memory cache (cachedSniperDomains/cachedFavorites) — no
- * browser.storage.local round-trip on this hot path.
+ * only the in-memory cache (cachedSniperDomains/cachedFavoriteMainDomains) —
+ * no browser.storage.local round-trip, and no re-deriving main domains from
+ * cachedFavorites from scratch, on this hot path.
  * @param {Object} cookie - The cookie that was just set
  */
 async function enforceSniperOnCookie(cookie) {
@@ -323,7 +376,7 @@ async function enforceSniperOnCookie(cookie) {
         if (backgroundReadyPromise) await backgroundReadyPromise;
 
         if (cachedSniperDomains.length === 0) return;
-        if (cachedFavorites.map(getMainDomain).includes(getMainDomain(cookie.domain))) return;
+        if (cachedFavoriteMainDomains.has(getMainDomain(cookie.domain))) return;
         if (!cachedSniperDomains.some(domain => cookieMatchesSniperDomain(cookie, domain))) return;
 
         await browser.cookies.remove({

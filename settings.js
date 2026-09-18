@@ -149,6 +149,198 @@ async function initializeSettings() {
 }
 
 
+// ==================== KEYBOARD SHORTCUT ====================
+
+// SHORTCUT_COMMAND_NAME lives in common.js — shared with background.js so
+// the two can't disagree on which manifest.json command this refers to.
+
+/**
+ * Reads Firefox's own record of the shortcut's current key combination
+ * (there is no need to keep a copy of it in browser.storage.local — Firefox
+ * already persists it, keyed by command name) and reflects it in the field.
+ * @param {HTMLInputElement} shortcutInput
+ */
+async function refreshShortcutDisplay(shortcutInput) {
+    try {
+        const commands = await browser.commands.getAll();
+        const current = commands.find(c => c.name === SHORTCUT_COMMAND_NAME);
+        shortcutInput.value = current?.shortcut || '';
+    } catch (error) {
+        console.error('Error reading current shortcut:', error);
+    }
+}
+
+/**
+ * Turns a keydown event into the key token Firefox's commands.update()
+ * expects for the non-modifier part of a shortcut (e.g. "A", "F5", "Comma"),
+ * or null if this particular key can't be used there at all (a bare
+ * modifier key on its own, or a key the commands API doesn't recognize).
+ * @param {KeyboardEvent} event
+ * @returns {string|null}
+ */
+function mapEventToShortcutKey(event) {
+    const { key } = event;
+
+    if (['Control', 'Alt', 'Shift', 'Meta', 'OS'].includes(key)) return null;
+    if (/^[a-zA-Z0-9]$/.test(key)) return key.toUpperCase();
+    if (/^F([1-9]|1[0-2])$/.test(key)) return key;
+
+    const namedKeys = {
+        ',': 'Comma',
+        '.': 'Period',
+        ' ': 'Space',
+        Home: 'Home',
+        End: 'End',
+        PageUp: 'PageUp',
+        PageDown: 'PageDown',
+        Insert: 'Insert',
+        Delete: 'Delete',
+        ArrowUp: 'Up',
+        ArrowDown: 'Down',
+        ArrowLeft: 'Left',
+        ArrowRight: 'Right'
+    };
+    return namedKeys[key] || null;
+}
+
+/**
+ * Builds the shortcut string commands.update() expects (e.g. "Ctrl+Shift+K")
+ * from a keydown event's currently-held modifiers and key.
+ * @param {KeyboardEvent} event
+ * @param {boolean} isMac
+ * @returns {string} May still be rejected by commands.update() itself (e.g.
+ *   Shift with no other modifier) — that's the authoritative validation, this
+ *   just formats what was pressed.
+ */
+function buildShortcutModifiers(event, isMac) {
+    const parts = [];
+    if (event.ctrlKey) parts.push(isMac ? 'MacCtrl' : 'Ctrl');
+    if (event.metaKey && isMac) parts.push('Command');
+    if (event.altKey) parts.push('Alt');
+    if (event.shiftKey) parts.push('Shift');
+    return parts;
+}
+
+/**
+ * Initializes the "Keyboard shortcut" settings section: the action dropdown
+ * (saved like any other setting) and the shortcut key-combination recorder
+ * (which talks to Firefox's own commands storage instead, via
+ * browser.commands — see refreshShortcutDisplay()'s comment).
+ */
+async function initializeShortcutSettings() {
+    const shortcutActionSelect = document.getElementById('shortcutAction');
+    const shortcutInput = document.getElementById('shortcutKeyInput');
+    const clearShortcutLink = document.getElementById('clearShortcut');
+    const isMac = navigator.platform.toLowerCase().includes('mac');
+
+    if (shortcutActionSelect) {
+        try {
+            const { shortcutAction } = await browser.storage.local.get({
+                shortcutAction: DEFAULT_SETTINGS.shortcutAction
+            });
+            shortcutActionSelect.value = shortcutAction;
+            shortcutActionSelect.addEventListener('change', async function () {
+                await saveSettings({ shortcutAction: this.value });
+            });
+        } catch (error) {
+            console.error('Error loading shortcut action:', error);
+        }
+    }
+
+    if (shortcutInput) {
+        await refreshShortcutDisplay(shortcutInput);
+
+        // Safety net for combinations the OS/browser reserves for itself
+        // (e.g. Cmd+J for Firefox's own Downloads on macOS): the browser can
+        // swallow that keydown before it ever reaches this page at all, so
+        // we'd otherwise sit stuck on a partial "Command+Shift+…" preview
+        // forever with the last (reserved) key never arriving. If no key
+        // finishes the combo shortly after recording starts (or after each
+        // modifier-only keydown), give up and say so instead of hanging.
+        let recordingTimeoutId = null;
+        const armRecordingTimeout = () => {
+            clearTimeout(recordingTimeoutId);
+            recordingTimeoutId = setTimeout(() => {
+                if (!shortcutInput.classList.contains('recording')) return;
+                shortcutInput.value = '';
+                showMessage(
+                    "No key combination came through — Firefox or macOS is probably already using it for something else (like Cmd+J for Downloads). Try a different combination.",
+                    true
+                );
+            }, 2500);
+        };
+
+        shortcutInput.addEventListener('focus', () => {
+            shortcutInput.classList.add('recording');
+            shortcutInput.value = '';
+            shortcutInput.placeholder = 'Press a key combination…';
+            armRecordingTimeout();
+        });
+
+        shortcutInput.addEventListener('blur', () => {
+            clearTimeout(recordingTimeoutId);
+            shortcutInput.classList.remove('recording');
+            shortcutInput.placeholder = 'Click and press a key combination';
+            // Whatever wasn't committed to a real shortcut (e.g. clicking away
+            // mid-combination) shouldn't linger in the field — fall back to
+            // whatever Firefox actually has recorded.
+            refreshShortcutDisplay(shortcutInput);
+        });
+
+        shortcutInput.addEventListener('keydown', async (event) => {
+            if (event.key === 'Escape') {
+                shortcutInput.blur();
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            armRecordingTimeout();
+
+            const modifiers = buildShortcutModifiers(event, isMac);
+            const finalKey = mapEventToShortcutKey(event);
+
+            if (!finalKey) {
+                // Only modifier keys held so far — show a live preview without
+                // committing anything yet.
+                shortcutInput.value = modifiers.length ? `${modifiers.join('+')}+…` : '';
+                return;
+            }
+
+            const shortcut = [...modifiers, finalKey].join('+');
+
+            try {
+                await browser.commands.update({ name: SHORTCUT_COMMAND_NAME, shortcut });
+                clearTimeout(recordingTimeoutId);
+                shortcutInput.value = shortcut;
+                shortcutInput.blur();
+                showMessage(`Shortcut set to ${shortcut}.`);
+            } catch (error) {
+                // The authoritative validation is Firefox's own — e.g. Shift
+                // with no Ctrl/Alt/Command, or a combination it already
+                // reserves for itself. Surface its message rather than
+                // guessing at every rule ourselves.
+                console.error('Error updating shortcut:', error);
+                shortcutInput.value = '';
+                showMessage(`Firefox rejected "${shortcut}": ${error.message}`, true);
+            }
+        });
+    }
+
+    clearShortcutLink?.addEventListener('click', async (event) => {
+        event.preventDefault();
+        try {
+            await browser.commands.reset(SHORTCUT_COMMAND_NAME);
+            if (shortcutInput) await refreshShortcutDisplay(shortcutInput);
+            showMessage('Shortcut cleared.');
+        } catch (error) {
+            console.error('Error clearing shortcut:', error);
+            showMessage(`Error: ${error.message}`, true);
+        }
+    });
+}
+
+
 // ==================== COOKIE MANAGEMENT ====================
 
 // fetchAllCookies() lives in common.js — shared with popup.js so both
@@ -317,7 +509,19 @@ async function importCookies() {
 async function resetSettingsAndFavorites() {
     try {
         await browser.storage.local.clear();
-        showMessage('Settings, favorites, and your mySniper list have been reset successfully!');
+
+        // The keyboard shortcut's key combination lives in Firefox's own
+        // commands storage, not browser.storage.local, so clear() above
+        // doesn't touch it — reset it separately so "reset everything"
+        // actually means everything. A failure here (nothing assigned yet)
+        // is harmless and shouldn't block the rest of the reset.
+        try {
+            await browser.commands.reset(SHORTCUT_COMMAND_NAME);
+        } catch (error) {
+            console.error('Error resetting shortcut:', error);
+        }
+
+        showMessage('Settings, favorites, your mySniper list, and your keyboard shortcut have been reset successfully!');
         setTimeout(() => {
             window.location.reload();
         }, 1500);
@@ -353,11 +557,12 @@ document.getElementById('closeMessage')?.addEventListener('click', function() {
 });
 
 // Reset button — this is a destructive, irreversible action (it also wipes
-// the mySniper keyword list, not just favorites/settings), so confirm first
-// rather than acting on a single misclick of a plain link.
+// the mySniper keyword list and the keyboard shortcut, not just
+// favorites/settings), so confirm first rather than acting on a single
+// misclick of a plain link.
 document.getElementById('resetButton')?.addEventListener('click', async () => {
     const confirmed = window.confirm(
-        'Reset all settings, favorites, and your mySniper keyword list back to factory defaults? This cannot be undone.'
+        'Reset all settings, favorites, your mySniper keyword list, and your keyboard shortcut back to factory defaults? This cannot be undone.'
     );
     if (confirmed) {
         await resetSettingsAndFavorites();
@@ -383,6 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialize settings
         initializeSettings();
+        initializeShortcutSettings();
     } catch (error) {
         console.error('Error during initialization:', error);
     }
