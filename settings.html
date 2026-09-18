@@ -98,8 +98,7 @@
             top: -0.5px;
         }
 
-        .shortcut-select,
-        .shortcut-input {
+        .shortcut-select {
             width: 220px;
             box-sizing: border-box;
             padding: 6px 10px;
@@ -108,20 +107,23 @@
             font-size: 13px;
             color: var(--text-color);
             background-color: var(--input-background);
-        }
-
-        .shortcut-select {
             cursor: pointer;
         }
 
-        .shortcut-input {
-            text-align: center;
-            cursor: text;
+        #shortcutKeyDisplay {
+            color: var(--primary-color);
         }
 
-        .shortcut-input.recording {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(5, 165, 93, 0.2);
+        .shortcut-configure-link {
+            color: var(--primary-color);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .shortcut-configure-link:hover {
+            text-decoration: underline;
         }
 
         #imagePopup {
@@ -243,11 +245,11 @@
                 </select>
             </div>
             <div class="settings-option">
-                <div class="option-content" title="Click the field, then press the key combination you want (e.g. Ctrl+Shift+K). It must include Ctrl, Alt, or ⌘ Command. Firefox will refuse combinations it already reserves for itself.">
+                <div class="option-content" title="Opens Firefox's own shortcut manager, where you record the key combination directly — it already knows which combinations are free on your system, on Mac, Windows, or Linux.">
                     <img src="resources/settings_shortcut.svg" alt="Shortcut key icon">
-                    <span>Shortcut</span>
+                    <span>Shortcut: <strong id="shortcutKeyDisplay">Not set</strong></span>
                 </div>
-                <input type="text" id="shortcutKeyInput" class="shortcut-input" readonly placeholder="Click and press a key combination" aria-label="Keyboard shortcut key combination" title="Click, then press the key combination you want. It must include Ctrl, Alt, or ⌘ Command as a modifier.">
+                <a href="#" id="configureShortcut" class="shortcut-configure-link">Configure in Firefox…</a>
             </div>
             <div class="settings-option">
                 <div class="option-content">
