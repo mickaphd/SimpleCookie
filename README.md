@@ -5,7 +5,7 @@
   <br />
   <strong>Status:</strong> Maintained
   <br>
-  <strong>Version:</strong> 3.6.1
+  <strong>Version:</strong> 3.7.0
   <br />
 <p align="center">
   <a href="https://addons.mozilla.org/firefox/addon/simplecookie/" target="_blank" rel="noopener">
@@ -28,10 +28,11 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 - **Cookie fetching**: SimpleCookie supports all cookie jars (containers) and partitioned cookies (3rd party, CHIPS) and displays a list of websites with the corresponding number of cookies.
 - **Domain aggregation**: SimpleCookie consolidates cookie subdomains under a main domain for clarity. It includes hundreds of exceptions for specific Second Level Domains (SLDs) used in various countries (e.g., .co.uk, .gouv.fr).
 - **Organized list**: Websites are sorted alphabetically for easy access. Sites storing cookies with an open tab are shown in green and can be displayed at the top. The active tab's domain is highlighted, along with sites in special containers, with partitioned cookies, or with a cookie that looks like an under-protected session/authentication cookie (missing Secure and/or HttpOnly).
-- **Detailed view**: Right-clicking on a listed website opens a table with detailed information about its associated cookies. Right-clicking additional sites consolidates this table with more cookies.
+- **Search bar**: Type in the bar at the top of the pop-up to instantly filter the list of websites. A small cross clears it.
+- **Detailed view**: Right-clicking on a listed website opens a table with detailed information about its associated cookies. Right-clicking another site replaces this table with that site's cookies.
 - **Effortless cookie removal**: A single click on a website deletes all cookies associated with that domain. Clicking on a specific cookie line in the detailed table removes only that individual cookie.
-- **Safety first**: A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered (you have 20 seconds to do so). A confirmation prompt also appears for the Dock shortcuts — you can approve or cancel it with your keyboard too (Enter to confirm, Escape/Backspace/Delete to cancel). An export/import function (JSON format) allows you to back up your cookies. Many footnotes have been added for educational purposes (icons, table headers, settings, etc.).
-- **Cookie editor**: An option in the settings allows you to create a new cookie from scratch. An edit option is available from the detailed table.
+- **Safety first**: A 'star/favorite' icon allows you to protect cookies from being deleted. A 'backwards' icon appears in the Dock to undo the very last cookie deletion you triggered, including the two delete shortcuts of the Dock (you have 20 seconds to do so). A confirmation prompt also appears for the Dock shortcuts — you can approve or cancel it with your keyboard too (Enter to confirm, Escape/Backspace/Delete to cancel). An export/import function (JSON format) allows you to back up your cookies. Many footnotes have been added for educational purposes (icons, table headers, settings, etc.).
+- **Cookie editor**: An option in the settings allows you to create a new cookie from scratch. An edit option is available from the detailed table, including the expiration date and time.
 - **Dock shortcuts**: The 'broom' icon deletes all cookies from websites with closed tabs while retaining cookies from open tabs (highlighted in green) and your favorites. The 'vacuum' icon deletes all cookies stored in Firefox except your favorites. The 'missile target' icon launches the myCleaner feature, allowing you to clear your selected browsing data. The 'gear' icon opens the settings.
 - **mySniper**: In the settings, keep a list of keywords (e.g. `google`, `linkedin`) that should never have cookies. Any cookie whose domain contains one of those keywords is deleted automatically — right away if it already exists, and the instant a new one appears from then on. No clicking needed, and your favorites are always exempt.
 - **Keyboard shortcut**: Assign a single keyboard shortcut in the settings to instantly open SimpleCookie, or trigger one specific Dock action (delete cookies from closed tabs, delete all cookies except favorites, or run myCleaner) from anywhere in Firefox. Press the same shortcut again while the popup is open to close it.
@@ -49,6 +50,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 ## Main Usages
 
 -   Click the SimpleCookie icon to open the main popup showing cookie counts per site.  
+-   Type in the search bar at the top to filter the list of websites.  
 -   Right-click a website to display detailed information about all cookies from the clicked domain.  
 -   Left-click a website to delete all its cookies, or a cookie line in the table to delete that specific one. 
 -   Use the Dock icons for quick cleaning actions:  
@@ -56,7 +58,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
     - **Vacuum:** Clean all cookies (except your favorites)  
     - **Missile target:** Launch the 'myCleaner' feature  
     - **Gear:** Open settings  
-    - **Undo arrow:** Undo your last cookie deletion (you have 20 seconds)  
+    - **Undo arrow:** Undo your last cookie deletion, Broom and Vacuum included (you have 20 seconds)  
 -   Hold Cmd (macOS) or Ctrl (PC) and click a green-highlighted site to switch to it  
 -   Set up **mySniper** in Settings with keywords to have matching cookies deleted automatically, no clicking needed  
 -   Assign a **keyboard shortcut** in Settings to open SimpleCookie or trigger a Dock action from anywhere in Firefox; press it again while the popup is open to close it  
@@ -65,7 +67,7 @@ SimpleCookie is the easiest and fastest way to view, learn about, and delete coo
 
 ## Privacy Policy
 
-SimpleCookie does not collect any data, and there is no analytics or telemetry in the code. This is just an open-source hobby project designed at the begining just for myself, an indie dev (I'm not even a developer; I'm a researcher!) who is concerned about privacy. SimpleCookie uses the following permissions to work properly: all_urls (for domain aggregation), browsingData (to clean up the dust!), cookies (of course!), tabs (to identify the active and closed tabs), contextualIdentities (for the containers), and storage (to store the settings).
+SimpleCookie does not collect any data, and there is no analytics or telemetry in the code. This is just an open-source hobby project designed at the beginning just for myself, an indie dev (I'm not even a developer; I'm a researcher!) who is concerned about privacy. SimpleCookie uses the following permissions to work properly: all_urls (for domain aggregation), browsingData (to clean up the dust!), cookies (of course!), tabs (to identify the active and closed tabs), contextualIdentities (for the containers), and storage (to store the settings).
 
 
 ## Issues
