@@ -19,6 +19,11 @@ let undoTimeout;
 // Global variable to store favorites
 let favorites = [];
 
+// User settings, loaded once each time the popup opens (see loadSettings()).
+// Starts as a copy of the defaults (DEFAULT_SETTINGS lives in common.js) so
+// everything below can rely on every setting always having a value.
+let settings = { ...DEFAULT_SETTINGS };
+
 // True while a destructive action (delete/undo) is in flight. Without this,
 // rapid-clicking two different domains — or a domain then Undo — before the
 // first click's async work and re-render finish could interleave and clobber
@@ -84,7 +89,9 @@ async function saveFavorites(favList) {
  * Loads the data only once (when the set is empty)
  */
 async function fetchTrackerDB() {
-    if (trackingSites.size > 0) return;
+    // The list is only used to draw the ghost icon — no need to load and
+    // parse ~6000 lines when that icon is turned off in the settings.
+    if (!settings.enableGhostIcon || trackingSites.size > 0) return;
     
     try {
         const response = await fetch(browser.runtime.getURL('resources/trackerdb.txt'));
@@ -95,26 +102,22 @@ async function fetchTrackerDB() {
     }
 }
 
-// fetchAllCookies() lives in common.js — shared with settings.js so both
-// pages fetch and de-duplicate cookies (including partitioned/CHIPS ones)
-// exactly the same way.
+// fetchAllCookies() lives in common.js — shared with settings.js and
+// background.js so they all fetch cookies (including partitioned/CHIPS
+// ones) exactly the same way.
 
 /**
- * Fetches all cookies and open tabs
+ * Fetches all cookies and open tabs (both at the same time)
  * Updates the cookie counter in the UI
  */
 async function fetchCookiesAndTabs() {
-    // Fetch cookies and store them in the cookies array
-    cookies = await fetchAllCookies();
-    
+    [cookies, tabs] = await Promise.all([fetchAllCookies(), browser.tabs.query({})]);
+
     // Update the cookie counter in the UI
     const cookieCounter = document.getElementById('cookie-counter');
     if (cookieCounter) {
         cookieCounter.textContent = cookies.length;
     }
-    
-    // Fetch all open tabs
-    tabs = await browser.tabs.query({});
 }
 
 /**
@@ -128,59 +131,39 @@ async function fetchData() {
 // ==================== SETTINGS MANAGEMENT ====================
 
 /**
- * Applies user settings from storage
- * Merges stored settings with defaults
+ * Loads user settings from storage into the `settings` variable.
+ * Passing DEFAULT_SETTINGS (see common.js) to storage.local.get() makes
+ * Firefox fill in the default value of any setting the user never touched,
+ * so nothing needs to be written back to storage here.
  */
-async function applySettings() {
-    // Defaults live in common.js (DEFAULT_SETTINGS) so popup.js and settings.js
-    // can never silently disagree about what a "default" is.
+async function loadSettings() {
     try {
-        // Get settings from storage and merge with defaults
-        const storedSettings = await browser.storage.local.get(DEFAULT_SETTINGS);
-        const settings = { ...DEFAULT_SETTINGS, ...storedSettings };
-        await browser.storage.local.set(settings);
-
-        const {
-            enableGhostIcon,
-            enableSpecialJarIcon,
-            enablePartitionIcon,
-            enableRiskyCookieIcon,
-            enableActiveTabHighlight
-        } = settings;
-
-        // Display cookies based on user preferences
-        displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableRiskyCookieIcon);
-
-        // Highlight the active tab domain if enabled
-        if (enableActiveTabHighlight) {
-            highlightActiveTabDomain();
-        }
+        settings = await browser.storage.local.get(DEFAULT_SETTINGS);
     } catch (error) {
-        console.error('Error applying settings:', error);
+        console.error('Error loading settings:', error);
     }
 }
 
 /**
- * Initializes the extension by fetching data and applying settings
+ * Initializes the extension by fetching data and displaying it
  * Shows a message and auto-closes if no cookies exist
  */
 async function initExtension() {
     try {
-        // Load favorites first
-        await loadFavorites();
+        // Load favorites and settings first (the settings decide whether
+        // the tracker list needs to be loaded at all)
+        await Promise.all([loadFavorites(), loadSettings()]);
 
-        // Then check if any cookies exist
-        cookies = await fetchAllCookies();
-        
+        // Then fetch the cookies, the open tabs and the tracker list
+        await fetchData();
+
         // If no cookies exist, show message and auto-close
         if (!hasCookiesToDelete()) {
-            showNoCoookiesMessage();
+            showNoCookiesMessage();
             return;
         }
-        
-        // Otherwise, continue with normal initialization
-        await fetchData();
-        await applySettings();
+
+        displayCookies();
     } catch (error) {
         console.error('Error initializing extension:', error);
     }
@@ -189,7 +172,23 @@ async function initExtension() {
 /**
  * Displays a message when no cookies are found and auto-closes
  */
-function showNoCoookiesMessage() {
+function showNoCookiesMessage() {
+    // Cookies were just deleted and can still be restored: keep the dock
+    // (and its Undo icon) on screen, and only show the message in place of
+    // the list. Once Undo expires, showUndoIcon()'s timer calls this again
+    // to show the normal message below and close the popup.
+    if (tempDeletedCookies.length > 0) {
+        const container = document.getElementById('cookies-container');
+        if (!container) return;
+
+        const messageElement = document.createElement('p');
+        messageElement.className = 'empty-message';
+        messageElement.textContent = 'No cookies left';
+        container.innerHTML = '';
+        container.appendChild(messageElement);
+        return;
+    }
+
     // Clear document body content
     document.body.innerHTML = '';
     document.body.style.display = 'flex';
@@ -220,44 +219,15 @@ function showNoCoookiesMessage() {
  */
 async function updateDisplay() {
     try {
-        // Fetch cookies first
-        cookies = await fetchAllCookies();
-        
+        await fetchCookiesAndTabs();
+
         // If we now have zero cookies, show message and return
-        if (cookies.length === 0) {
-            showNoCoookiesMessage();
+        if (!hasCookiesToDelete()) {
+            showNoCookiesMessage();
             return;
         }
-        
-        // Continue with normal display update
-        tabs = await browser.tabs.query({});
-        
-        // Update cookie counter
-        const cookieCounter = document.getElementById('cookie-counter');
-        if (cookieCounter) {
-            cookieCounter.textContent = cookies.length;
-        }
-        
-        // Get current settings
-        const settings = await browser.storage.local.get([
-            'enableGhostIcon',
-            'enableSpecialJarIcon',
-            'enablePartitionIcon',
-            'enableRiskyCookieIcon',
-            'enableActiveTabHighlight'
-        ]);
 
-        displayCookies(
-            settings.enableGhostIcon,
-            settings.enableSpecialJarIcon,
-            settings.enablePartitionIcon,
-            settings.enableRiskyCookieIcon
-        );
-
-        // Highlight active tab if enabled
-        if (settings.enableActiveTabHighlight) {
-            highlightActiveTabDomain();
-        }
+        displayCookies();
     } catch (error) {
         console.error('Error updating display:', error);
     }
@@ -273,21 +243,18 @@ async function updateDisplay() {
 // ==================== DISPLAY LOGIC ====================
 
 /**
- * Gets the current browser theme (dark or light)
- * @returns {string} 'dark' or 'light'
+ * Builds the Set of main domains of all open tabs, for quick "does this
+ * site have an open tab?" checks.
+ * @returns {Set<string>} Main domains of the open tabs
  */
-function getCurrentTheme() {
-    // Cache the result to avoid multiple DOM queries
-    if (!getCurrentTheme.cache) {
-        getCurrentTheme.cache = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        
-        // Update the cache when the theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            getCurrentTheme.cache = e.matches ? 'dark' : 'light';
-        });
-    }
-    
-    return getCurrentTheme.cache;
+function getOpenTabMainDomains() {
+    return new Set(tabs.map(({ url }) => {
+        try {
+            return getMainDomain(new URL(url).hostname);
+        } catch {
+            return ''; // Skip invalid URLs
+        }
+    }).filter(Boolean));
 }
 
 // ==================== RISK HEURISTICS ====================
@@ -315,15 +282,10 @@ function isRiskyCookie(cookie) {
 
 /**
  * Displays cookies with favorites and insight icons
- * @param {boolean} enableGhostIcon - Whether to show tracking site icon
- * @param {boolean} enableSpecialJarIcon - Whether to show container icon
- * @param {boolean} enablePartitionIcon - Whether to show partition icon
- * @param {boolean} enableRiskyCookieIcon - Whether to show at-risk cookie icon
+ * Which insight icons are shown, and the sorting, come from the user's
+ * settings (see loadSettings()).
  */
-async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enablePartitionIcon, enableRiskyCookieIcon) {
-    // Fetch the "OpenTabsTop" setting to determine sorting behavior
-    const { OpenTabsTop = false } = await browser.storage.local.get('OpenTabsTop');
-
+function displayCookies() {
     const container = document.getElementById('cookies-container');
     if (!container) return; // Safety check
 
@@ -332,44 +294,40 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
 
     const fragment = document.createDocumentFragment();
 
-    // Build a Set of main domains from open tabs for quick membership checks
-    const openTabDomainsSet = new Set(tabs.map(({ url }) => {
-        try {
-            return getMainDomain(new URL(url).hostname);
-        } catch {
-            return '';
-        }
-    }).filter(Boolean));
+    // Set of main domains from open tabs for quick membership checks
+    const openTabDomainsSet = getOpenTabMainDomains();
 
     // Aggregate cookie info by main domain
-    const domainInfo = {};
+    const domainInfo = new Map();
     cookies.forEach(cookie => {
         const mainDomain = getMainDomain(cookie.domain);
-        if (!domainInfo[mainDomain]) {
-            domainInfo[mainDomain] = {
+        let info = domainInfo.get(mainDomain);
+        if (!info) {
+            info = {
                 count: 0,
                 hasNonDefaultContainer: false,
                 hasPartition: false,
                 hasRiskyCookie: false
             };
+            domainInfo.set(mainDomain, info);
         }
-        domainInfo[mainDomain].count += 1;
+        info.count += 1;
 
         if (cookie.storeId !== 'firefox-default') {
-            domainInfo[mainDomain].hasNonDefaultContainer = true;
+            info.hasNonDefaultContainer = true;
         }
         if (cookie.partitionKey) {
-            domainInfo[mainDomain].hasPartition = true;
+            info.hasPartition = true;
         }
         if (isRiskyCookie(cookie)) {
-            domainInfo[mainDomain].hasRiskyCookie = true;
+            info.hasRiskyCookie = true;
         }
     });
 
-    // Convert domain info object to array for sorting
-    let domainsArray = Object.entries(domainInfo);
+    // Convert domain info to an array of [domain, info] pairs for sorting
+    let domainsArray = Array.from(domainInfo);
 
-    if (OpenTabsTop) {
+    if (settings.OpenTabsTop) {
         // Separate domains into those with open tabs and others
         const openTabsDomains = [];
         const otherDomains = [];
@@ -424,32 +382,66 @@ async function displayCookies(enableGhostIcon, enableSpecialJarIcon, enableParti
         fragment.appendChild(element);
 
         // Append insight icons based on settings and domain info
-        if (enableGhostIcon && trackingSites.has(website)) {
+        if (settings.enableGhostIcon && trackingSites.has(website)) {
             appendIcon(element, 'resources/insight_ghost.svg', `${website} tracking icon`);
         }
-        if (enableSpecialJarIcon && info.hasNonDefaultContainer) {
+        if (settings.enableSpecialJarIcon && info.hasNonDefaultContainer) {
             appendIcon(element, 'resources/insight_container.svg', `${website} container icon`);
         }
-        if (enablePartitionIcon && info.hasPartition) {
+        if (settings.enablePartitionIcon && info.hasPartition) {
             appendIcon(element, 'resources/insight_partition.svg', `${website} partition icon`);
         }
-        if (enableRiskyCookieIcon && info.hasRiskyCookie) {
+        if (settings.enableRiskyCookieIcon && info.hasRiskyCookie) {
             appendIcon(element, 'resources/insight_risky.svg', `${website} has a cookie at risk`);
         }
 
-        // Highlight domains with open tabs in green color
+        // Highlight domains with open tabs in green color (see .open-tab in popup.css)
         if (openTabDomainsSet.has(website)) {
-            element.style.color = '#05A55D';
+            element.classList.add('open-tab');
         }
     });
 
     container.appendChild(fragment);
 
-    // Call highlightActiveTabDomain at the end of displayCookies
-    const settings = await browser.storage.local.get('enableActiveTabHighlight');
+    // Highlight the active tab domain if enabled
     if (settings.enableActiveTabHighlight) {
         highlightActiveTabDomain();
     }
+
+    // The list was just rebuilt: hide again what the search bar filters out
+    applySearchFilter();
+}
+
+/**
+ * Filters the list: only the websites whose domain contains the text typed
+ * in the search bar stay visible. An empty search bar shows everything.
+ * This only hides rows — the dock actions still apply to all cookies.
+ */
+function applySearchFilter() {
+    const searchInput = document.getElementById('search');
+    const container = document.getElementById('cookies-container');
+    const popup = document.getElementById('popup');
+    if (!searchInput || !container || !popup) return;
+
+    const query = searchInput.value.trim().toLowerCase();
+
+    // The cross that clears the search is only shown when there's text
+    const clearButton = document.getElementById('search-clear');
+    if (clearButton) {
+        clearButton.hidden = !searchInput.value;
+    }
+
+    // The popup is as wide as its widest row: freeze that width on the
+    // first search, so the popup doesn't shrink and grow at every keystroke.
+    if (query && !popup.style.minWidth) {
+        popup.style.minWidth = `${popup.offsetWidth}px`;
+    }
+
+    Array.from(container.children).forEach(element => {
+        if (element.dataset.domain) {
+            element.hidden = !element.dataset.domain.includes(query);
+        }
+    });
 }
 
 /**
@@ -506,45 +498,14 @@ function highlightActiveTabDomain() {
 // ==================== TAB SWITCHER ====================
 
 /**
- * Highlights domains of open tabs more prominently when the platform-specific key is pressed
+ * Highlights domains of open tabs more prominently while the
+ * platform-specific key is pressed. The look itself (bold, shifted, "goto"
+ * cursor) lives in popup.css under .tab-switcher-active — this only turns
+ * that class on or off.
  * @param {boolean} isKeyPressed - Whether the modifier key is pressed
  */
 function highlightOpenTabDomains(isKeyPressed) {
-    const container = document.getElementById('cookies-container');
-    if (!container) return;
-
-    // Cache open tab domains
-    const openTabDomains = new Set(tabs.map(({ url }) => {
-        try {
-            return getMainDomain(new URL(url).hostname);
-        } catch (e) {
-            return '';
-        }
-    }).filter(Boolean));
-
-    // Loop through all domain elements
-    Array.from(container.children).forEach(element => {
-        const website = element.dataset.domain;
-        const mainDomain = getMainDomain(website);
-
-        if (openTabDomains.has(mainDomain)) {
-            // Normal appearance (just green text)
-            element.style.color = '#05A55D';
-
-            // Enhanced appearance when key is pressed
-            if (isKeyPressed) {
-                element.style.fontWeight = 'bold';
-                element.style.transform = 'translateX(4px)';
-                element.style.cursor = 'alias'; // Show 'goto' cursor
-            } else {
-                element.style.fontWeight = 'normal';
-                element.style.transform = '';
-                element.style.cursor = 'pointer';
-            }
-        } else {
-            element.style.color = ''; // Reset color if not active
-        }
-    });
+    document.getElementById('cookies-container')?.classList.toggle('tab-switcher-active', isKeyPressed);
 }
 
 /**
@@ -557,13 +518,8 @@ async function navigateToTab(domain) {
     
     for (const tab of tabs) {
         try {
-            const tabHostname = new URL(tab.url).hostname;
-            const tabMainDomain = getMainDomain(tabHostname);
-            
             // If domains match, switch to this tab
-            if (isDomainOrSubdomain(tabMainDomain, mainDomain) || 
-                isDomainOrSubdomain(mainDomain, tabMainDomain)) {
-                
+            if (getMainDomain(new URL(tab.url).hostname) === mainDomain) {
                 if (!tab.active) {
                     await browser.tabs.update(tab.id, { active: true });
                     await browser.windows.update(tab.windowId, { focused: true });
@@ -593,8 +549,6 @@ function displayCookieDetails(mainDomain, cookies) {
     // otherwise right-clicking multiple domains keeps stacking tables (and
     // their listeners, some referencing already-stale cookie data) forever.
     document.querySelectorAll('.cookie-table').forEach(table => table.remove());
-
-    const isDarkMode = getCurrentTheme() === 'dark';
 
     // Filter and sort cookies for the given main domain
     const sortedCookies = cookies.filter(cookie => getMainDomain(cookie.domain) === mainDomain)
@@ -640,7 +594,8 @@ function displayCookieDetails(mainDomain, cookies) {
      */
     const addRow = (cookie) => {
         const row = table.insertRow();
-        const { name, value, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite, path } = cookie;
+        row.className = 'cookie-row'; // Hover effect lives in popup.css
+        const { name, value, domain, partitionKey, storeId, expirationDate, secure, httpOnly, sameSite } = cookie;
         const cookieSize = calculateCookieSize(cookie);
         const formattedStoreId = storeId.replace(/^firefox-/, '');
         const expirationDateFormatted = formatExpirationDate(expirationDate);
@@ -675,7 +630,7 @@ function displayCookieDetails(mainDomain, cookies) {
             if (index === cellContents.length - 1) {
                 // This is the edit cell
                 cell.textContent = content;
-                cell.title = 'Edit this cookie. It is a BETA version so proceed with caution.';
+                cell.title = 'Edit this cookie.';
                 cell.style.cursor = 'pointer';
                 cell.style.textAlign = 'center';
                 cell.style.fontSize = '16px';
@@ -683,32 +638,14 @@ function displayCookieDetails(mainDomain, cookies) {
                 cell.addEventListener('click', (event) => {
                     event.stopPropagation();
 
-                    const cookieData = {
-                        name: cookie.name,
-                        value: cookie.value,
-                        domain: cookie.domain,
-                        path: cookie.path,
-                        partition: partitionValue,
-                        container: formattedStoreId,
-                        expiration: expirationDateFormatted || '',
-                        secure: cookie.secure,
-                        httpOnly: cookie.httpOnly,
-                        sameSite: cookie.sameSite || 'None',
-                    };
-
-                    const queryParams = new URLSearchParams();
-                    queryParams.set('data', encodeURIComponent(JSON.stringify(cookieData)));
-                    browser.tabs.create({ url: `create.html?${queryParams}` });
+                    // getCookieEditUrl() lives in common.js — shared with create.js
+                    browser.tabs.create({ url: getCookieEditUrl(cookie) });
                 });
             } else {
                 cell.textContent = content;
-                
-                // Add tooltip to show full content on hover
-                cell.addEventListener('mouseenter', function() {
-                    if (!cell.title) {
-                        cell.title = cell.textContent;
-                    }
-                });
+
+                // Tooltip to show full content on hover (cells are truncated)
+                cell.title = content;
             }
             
             // Check if this is the expiration date cell and if the cookie is expired
@@ -741,14 +678,7 @@ function displayCookieDetails(mainDomain, cookies) {
             await withBusyGuard(async () => {
                 // Store the deleted cookie for undo functionality
                 tempDeletedCookies.push({ ...cookie });
-                await deleteCookie({
-                    name: cookie.name,
-                    domain: cookie.domain,
-                    path: cookie.path,
-                    secure: cookie.secure,
-                    storeId: cookie.storeId,
-                    partitionKey: cookie.partitionKey
-                });
+                await deleteCookie(cookie);
                 row.remove();
                 showUndoIcon(); // Show undo option after deletion
 
@@ -758,16 +688,6 @@ function displayCookieDetails(mainDomain, cookies) {
                 // check, so there's no need to duplicate that here.
                 await updateDisplay();
             });
-        });
-        
-        // Add hover effects for the row
-        row.addEventListener('mouseenter', function() {
-            row.style.backgroundColor = isDarkMode ? '#5F5E68' : '#DFDFE4';
-            row.style.cursor = 'pointer';
-        });
-        row.addEventListener('mouseleave', function() {
-            row.style.backgroundColor = '';
-            row.style.cursor = 'default';
         });
     };
     
@@ -784,7 +704,7 @@ function displayCookieDetails(mainDomain, cookies) {
  * display. It used to do both internally, which meant deleting a whole
  * domain triggered one full cookie refetch and one full re-render PER
  * cookie instead of once for the whole batch. Callers are now responsible
- * for refreshing afterward — see deleteCookies() below for the batch case,
+ * for refreshing afterward — see the dock actions below for the batch case,
  * and the cookie-detail table's row click handler for the single-cookie case.
  * @param {Object} cookie - Cookie object with properties needed for deletion
  * @returns {Promise<void>}
@@ -793,38 +713,11 @@ async function deleteCookie(cookie) {
     const isFavorite = favorites.includes(getMainDomain(cookie.domain));
     if (isFavorite) return; // Skip deletion for favorites
 
-    const cookieUrl = getCookieUrl(cookie);
-    // 'firefox-default', not '0' (that's Chrome's convention) — matches
-    // Firefox's actual store id. cookie.storeId is always set in practice
-    // (every cookie here comes from fetchAllCookies(), which the cookies API
-    // always populates it for), so this is just a defensive fallback.
-    const storeId = cookie.storeId || 'firefox-default';
-
     try {
-        await browser.cookies.remove({
-            url: cookieUrl,
-            name: cookie.name,
-            storeId: storeId,
-            partitionKey: cookie.partitionKey
-        });
+        // removeCookie() lives in common.js — shared with background.js
+        await removeCookie(cookie);
     } catch (error) {
         console.error('Error deleting cookie:', error);
-    }
-}
-
-/**
- * Deletes cookies based on a filter function
- * All matching cookies are removed in parallel, and the caller is expected
- * to refresh the cookies array / display once afterward (see callers below).
- * @param {Function} filterFn - Function that returns true for cookies to delete
- * @returns {Promise<void>}
- */
-async function deleteCookies(filterFn) {
-    try {
-        const cookiesToDelete = cookies.filter(filterFn);
-        await Promise.all(cookiesToDelete.map(deleteCookie));
-    } catch (error) {
-        console.error('Error deleting multiple cookies:', error);
     }
 }
 
@@ -844,28 +737,12 @@ async function deleteAllCookiesForDomain(domain) {
         // Save for potential undo
         tempDeletedCookies = domainCookies.map(cookie => ({ ...cookie }));
 
-        // Delete all cookies for this domain
-        await deleteCookies(cookie => getMainDomain(cookie.domain) === mainDomain);
+        // Delete all cookies for this domain (in parallel)
+        await Promise.all(domainCookies.map(deleteCookie));
 
         showUndoIcon();
     } catch (error) {
         console.error('Error deleting cookies for domain:', error);
-    }
-}
-
-/**
- * Deletes cookies from tabs that are no longer open
- * Pure mutation — the caller refreshes the display afterward (see icon1's
- * click handler below).
- * @param {Array} closedTabsCookies - Array of cookies from closed tabs
- */
-async function deleteCookiesFromClosedTabs(closedTabsCookies) {
-    try {
-        await deleteCookies(cookie =>
-            closedTabsCookies.includes(cookie) && !favorites.includes(getMainDomain(cookie.domain))
-        );
-    } catch (error) {
-        console.error('Error deleting cookies from closed tabs:', error);
     }
 }
 
@@ -889,16 +766,23 @@ async function undoLastDeletion() {
             !sniperKeywords.some(keyword => cookieMatchesSniperDomain(cookie, keyword))
         );
 
-        await Promise.all(cookiesToRestore.map(cookie => {
+        // Promise.allSettled: one cookie Firefox refuses to restore shouldn't
+        // stop the others, nor the display refresh below.
+        // path is passed explicitly: when it's left out, Firefox derives it
+        // from the URL's "directory", so a cookie on /account would come
+        // back on / instead.
+        await Promise.allSettled(cookiesToRestore.map(cookie => {
             return browser.cookies.set({
                 url: getCookieUrl(cookie),
                 name: cookie.name,
                 value: cookie.value,
+                path: cookie.path,
                 expirationDate: cookie.expirationDate,
                 secure: cookie.secure,
                 httpOnly: cookie.httpOnly,
                 sameSite: cookie.sameSite,
                 storeId: cookie.storeId,
+                firstPartyDomain: cookie.firstPartyDomain,
                 partitionKey: cookie.partitionKey
             });
         }));
@@ -925,20 +809,6 @@ async function undoLastDeletion() {
  */
 async function myCleaner() {
     try {
-        // Get user settings
-        const settings = await browser.storage.local.get([
-            'mycleanerCookies',
-            'mycleanerBrowsingHistory',
-            'mycleanerCache',
-            'mycleanerAutofill',
-            'mycleanerDownloadHistory',
-            'mycleanerService',
-            'mycleanerPlugin',
-            'mycleanerLocal',
-            'mycleanerIndexed',
-            'mycleanerPasswords'
-        ]);
-
         // Create options object
         const options = {
             cookies: settings.mycleanerCookies,
@@ -976,18 +846,37 @@ async function myCleaner() {
 // own separate, unconfirmed deletion path in background.js.
 
 /**
+ * Deletes the given cookies in parallel and arms Undo for them — the
+ * common part of the two cookie-deleting dock actions below.
+ * @param {Array} cookiesToDelete - Cookies to delete
+ */
+async function deleteCookiesWithUndo(cookiesToDelete) {
+    // Save for potential undo
+    tempDeletedCookies = cookiesToDelete.map(cookie => ({ ...cookie }));
+
+    await Promise.all(cookiesToDelete.map(deleteCookie));
+
+    showUndoIcon();
+}
+
+/**
  * Deletes cookies from closed tabs — same action as clicking icon1.
  */
 async function runDeleteClosedTabsCookiesAction() {
     if (!hasCookiesToDelete()) return;
-    const openTabUrls = tabs.map(tab => new URL(tab.url).hostname);
-    const cookiesAssociatedWithClosedTabs = getCookiesAssociatedWithClosedTabs(cookies, openTabUrls);
-    if (cookiesAssociatedWithClosedTabs.length === 0) return;
+    // Cookies whose site has no open tab, favorites excluded
+    const openTabDomains = getOpenTabMainDomains();
+    const favoriteDomains = new Set(favorites.map(getMainDomain));
+    const cookiesToDelete = cookies.filter(cookie => {
+        const mainDomain = getMainDomain(cookie.domain);
+        return !openTabDomains.has(mainDomain) && !favoriteDomains.has(mainDomain);
+    });
+    if (cookiesToDelete.length === 0) return;
 
     const userConfirmed = await showConfirmationModal();
     if (userConfirmed) {
         await withBusyGuard(async () => {
-            await deleteCookiesFromClosedTabs(cookiesAssociatedWithClosedTabs);
+            await deleteCookiesWithUndo(cookiesToDelete);
             await updateDisplay();
         });
     }
@@ -1005,7 +894,7 @@ async function runDeleteAllCookiesAction() {
     const userConfirmed = await showConfirmationModal();
     if (userConfirmed) {
         await withBusyGuard(async () => {
-            await Promise.all(cookiesToDelete.map(cookie => deleteCookie(cookie)));
+            await deleteCookiesWithUndo(cookiesToDelete);
             await updateDisplay();
         });
     }
@@ -1064,8 +953,9 @@ async function runPendingShortcutAction() {
 document.addEventListener('DOMContentLoaded', async function () {
     try {
         window.focus();
-        // Refresh badge when popup opens
-        await browser.runtime.sendMessage({ 
+        // Refresh badge when popup opens (not awaited: the popup shouldn't
+        // wait for the badge before showing the cookies)
+        browser.runtime.sendMessage({ 
             action: 'updateBadge' 
         }).catch(() => {
             // Ignore errors if background script is not ready
@@ -1082,24 +972,26 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         const cookiesContainer = document.getElementById('cookies-container');
         
-        let isModifierPressed = false;
+        // Search bar: filter the list while typing; the small cross clears
+        // it (Escape can't be used for that: Firefox closes the popup on it)
+        const searchInput = document.getElementById('search');
+        searchInput?.addEventListener('input', applySearchFilter);
+        document.getElementById('search-clear')?.addEventListener('click', () => {
+            searchInput.value = '';
+            applySearchFilter();
+            searchInput.focus();
+        });
+        searchInput?.focus();
+
         const isMacOS = navigator.platform.toLowerCase().includes('mac');
 
-        // Event listener for key press
-        document.addEventListener('keydown', (event) => {
-            isModifierPressed = isMacOS ? event.metaKey : event.ctrlKey;
-            if (isModifierPressed) {
-                highlightOpenTabDomains(true);
-            }
-        });
+        // True if the Tab Switcher key (Command on macOS, Ctrl on PC) is
+        // held down during the given keyboard or mouse event
+        const isModifierPressed = (event) => isMacOS ? event.metaKey : event.ctrlKey;
 
-        // Event listener for key release
-        document.addEventListener('keyup', (event) => {
-            if ((isMacOS && !event.metaKey) || (!isMacOS && !event.ctrlKey)) {
-                isModifierPressed = false;
-                highlightOpenTabDomains(false);
-            }
-        });
+        // Event listeners for key press / release: show or hide the Tab Switcher hint
+        document.addEventListener('keydown', (event) => highlightOpenTabDomains(isModifierPressed(event)));
+        document.addEventListener('keyup', (event) => highlightOpenTabDomains(isModifierPressed(event)));
 
         // Event listener for the cookie container click events
         cookiesContainer?.addEventListener('click', async (event) => {
@@ -1108,22 +1000,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 event.preventDefault();
 
                 // First check if modifier key is currently pressed
-                if (isModifierPressed) {
-                    // Check open-tab membership directly instead of reading back the
-                    // rendered CSS color: getComputedStyle() always normalizes to
-                    // rgb(), so the old '#05A55D' half of this check could never
-                    // match, and inferring state from a painted color is more
-                    // fragile than just asking the data.
-                    const openTabDomains = new Set(tabs.map(({ url }) => {
-                        try {
-                            return getMainDomain(new URL(url).hostname);
-                        } catch {
-                            return '';
-                        }
-                    }).filter(Boolean));
-                    const isGreenDomain = openTabDomains.has(getMainDomain(website));
-
-                    if (isGreenDomain) {
+                if (isModifierPressed(event)) {
+                    // Tab Switcher: only for domains with an open tab (the green ones)
+                    if (event.target.classList.contains('open-tab')) {
                         await navigateToTab(website);
                         return;
                     }
@@ -1143,12 +1022,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         // Event listener for the cookie container right-click: Displays cookie details for the selected domain
-        cookiesContainer?.addEventListener('contextmenu', async (event) => {
+        cookiesContainer?.addEventListener('contextmenu', (event) => {
             try {
                 if (event.target.nodeName === 'DIV') {
                     const website = event.target.dataset.domain;
                     event.preventDefault();
-                    await displayCookieDetails(website, cookies);
+                    displayCookieDetails(website, cookies);
                 }
             } catch (error) {
                 console.error('Error in contextmenu handler:', error);
@@ -1195,9 +1074,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.error('Error in icon5 click handler:', error);
             }
         });
-
-        // When popup opens, initialize with default state
-        highlightOpenTabDomains(false);
     } catch (error) {
         console.error('Error in DOMContentLoaded handler:', error);
     }
@@ -1224,11 +1100,17 @@ function showUndoIcon() {
     undoTimeout = setTimeout(() => {
         undoIcon.style.display = 'none';
         tempDeletedCookies = [];
+
+        // If the popup was only kept open for Undo (no cookies left), it
+        // can now show its normal "no cookies" message and close.
+        if (!hasCookiesToDelete()) {
+            showNoCookiesMessage();
+        }
     }, 20000); // 20 seconds to undo
 }
 
-// getCookieUrl() lives in common.js — shared with background.js, which now
-// also needs to build cookie removal URLs to enforce mySniper.
+// getCookieUrl() and removeCookie() live in common.js — shared with
+// background.js, which also needs to remove cookies to enforce mySniper.
 
 /**
  * Checks if there are any cookies to delete
@@ -1265,7 +1147,7 @@ function showConfirmationModal() {
             resolve(response);
             yesButton.removeEventListener('click', handleYes);
             noButton.removeEventListener('click', handleNo);
-            window.removeEventListener('click', handleClickOutside);
+            modal.removeEventListener('click', handleClickOutside);
             document.removeEventListener('keydown', handleKeydown, true);
         };
 
@@ -1275,11 +1157,14 @@ function showConfirmationModal() {
         yesButton.addEventListener('click', handleYes);
         noButton.addEventListener('click', handleNo);
 
+        // Clicking the dark area around the two buttons cancels. (This used
+        // to compare the click target with the modal itself, which could
+        // never match: .modal-content covers the whole modal.)
         const handleClickOutside = (event) => {
-            if (event.target === modal) handleResponse(false);
+            if (!event.target.closest('.icon-button')) handleResponse(false);
         };
 
-        window.addEventListener('click', handleClickOutside);
+        modal.addEventListener('click', handleClickOutside);
 
         // Same convention as the browser's own confirm()/alert() dialogs on
         // both Mac and Windows: Enter approves. Escape is the standard
@@ -1303,51 +1188,11 @@ function showConfirmationModal() {
 }
 
 
-// ==================== DOMAIN HELPERS ====================
+// ==================== FORMAT HELPERS ====================
 
-// getMainDomain(), numLevels and specialSLDs live in common.js — shared with
-// background.js so the popup's domain grouping and the badge's cookie count
-// always agree on what counts as the same site.
-
-/**
- * Checks whether two domains belong to the same site (same main domain).
- * navigateToTab() — its only caller — already passes in domains that went
- * through getMainDomain() first, so this used to also carry a right-to-left
- * segment-by-segment fallback for a genuine "is domain1 a subdomain of
- * domain2" check; with both inputs already reduced to their main domain,
- * that fallback could never actually fire, so it's gone. getMainDomain() is
- * still applied here (not a bare ===) so this stays correct if a future
- * caller ever passes a raw hostname instead of an already-reduced one.
- * @param {string} domain1 - First domain
- * @param {string} domain2 - Second domain
- * @returns {boolean} True if both domains share the same main domain
- */
-function isDomainOrSubdomain(domain1, domain2) {
-    if (!domain1 || !domain2) return false;
-
-    try {
-        return getMainDomain(domain1) === getMainDomain(domain2);
-    } catch (error) {
-        console.error('Error checking domain relationship:', error);
-        return false;
-    }
-}
-
-/**
- * Filters cookies associated with closed tabs
- * Builds the set of open-tab main domains once instead of re-scanning every
- * open tab's URL for every cookie, and compares main-domain-to-main-domain
- * instead of a raw substring check (the old `tabUrl.includes(cookieDomain)`
- * could also false-positive — e.g. a tab on "notexample.com" would count as
- * still "open" for a cookie on "example.com").
- * @param {Array} cookies - Array of cookie objects
- * @param {Array} openTabUrls - Array of hostnames from open tabs
- * @returns {Array} Array of cookies from closed tabs
- */
-function getCookiesAssociatedWithClosedTabs(cookies, openTabUrls) {
-    const openTabDomains = new Set(openTabUrls.filter(Boolean).map(getMainDomain));
-    return cookies.filter(cookie => !openTabDomains.has(getMainDomain(cookie.domain)));
-}
+// getMainDomain() lives in common.js — shared with background.js so the
+// popup's domain grouping and the badge's cookie count always agree on what
+// counts as the same site.
 
 /**
  * Calculates the size of a cookie based on name and value

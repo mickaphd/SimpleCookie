@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Create and edit cookies in Firefox with SimpleCookie">
-    <title>SimpleCookie | Create & Edit</title>
+    <title>SimpleCookie | Create &amp; Edit</title>
     <link rel="stylesheet" href="theme.css">
     <style>
         .form-group {
@@ -76,13 +76,6 @@
             margin-bottom: 0;
         }
 
-        .beta-text {
-            margin-top: 20px;
-            text-align: right;
-            font-size: 12px;
-            color: #777;
-        }
-
         @media (max-width: 600px) {
             .form-group {
                 flex-direction: column;
@@ -104,7 +97,7 @@
 <body>
     <div class="container">
         <div class="header-container">
-            <h1>SimpleCookie | <b>Create & Edit</b></h1>
+            <h1>SimpleCookie | <b id="pageTitle">Create Cookie</b></h1>
             <div class="background-icon"></div>
         </div>
 
@@ -119,13 +112,14 @@
                 <div class="section-title">Basic Properties</div>
 
                 <div class="form-group required">
-                    <label for="name" title="If you update a cookie by changing its name, SimpleCookie will most likely create another cookie">Name</label>
+                    <label for="name" title="Name of the cookie. When editing, changing the name, domain, path, container or partition key moves the cookie: the original one is removed.">Name</label>
                     <input type="text" id="name" required aria-required="true">
                 </div>
 
-                <div class="form-group required">
-                    <label for="value" title="Data stored in the cookie (e.g., session token, preferences)">Value</label>
-                    <input type="text" id="value" required aria-required="true">
+                <!-- Not required: a cookie with an empty value is valid (and must stay editable) -->
+                <div class="form-group">
+                    <label for="value" title="Data stored in the cookie (e.g., session token, preferences). Can be left empty.">Value</label>
+                    <input type="text" id="value">
                 </div>
 
                 <div class="form-group required">
@@ -191,16 +185,17 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="expirationDate" title="When cookie expires (if blank, becomes a session cookie)">Expires</label>
-                    <input type="date" id="expirationDate">
+                    <label for="expirationDate" title="Date and time (your local time) when the cookie expires. If blank, it becomes a session cookie, deleted when Firefox closes.">Expires</label>
+                    <input type="datetime-local" id="expirationDate" step="1">
                 </div>
             </div>
 
-            <div id="beta-text" class="beta-text">Proceed with caution ⚠️</div>
-            <button type="submit">Create Cookie</button>
+            <button type="submit" id="submitButton">Create Cookie</button>
         </form>
     </div>
 
+    <script src="common.js"></script>
+    <script src="message.js"></script>
     <script src="create.js"></script>
 </body>
 </html>

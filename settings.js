@@ -1,55 +1,8 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
-// ==================== THEME MANAGEMENT ====================
-
-/**
- * Detects and applies the appropriate theme based on user preference
- */
-function applyTheme() {
-    // Check if Firefox's theme is dark
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
-}
-
-// Apply theme immediately when script loads
-applyTheme();
-
-// Listen for theme changes
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-
-
-// ==================== UI MESSAGING ====================
-
-/**
- * Shows a message to the user with automatic timeout
- * @param {string} message - The message to display
- * @param {boolean} isError - Whether this is an error message
- */
-function showMessage(message, isError = false) {
-    const messageBox = document.getElementById('messageBox');
-    const messageText = document.getElementById('messageText');
-    
-    if (!messageBox || !messageText) return;
-    
-    messageText.textContent = message;
-    
-    // Remove any existing classes
-    messageBox.classList.remove('success-message', 'error-message');
-    
-    // Add appropriate class based on message type
-    messageBox.classList.add(isError ? 'error-message' : 'success-message');
-    
-    messageBox.style.display = 'block';
-    
-    // Auto-hide after 5 seconds
-    setTimeout(function() {
-        messageBox.style.display = 'none';
-    }, 5000);
-}
+// The light/dark theme is handled entirely in CSS (see theme.css), and
+// showMessage() lives in message.js — shared with create.js.
 
 
 // ==================== SETTINGS MANAGEMENT ====================
@@ -102,13 +55,14 @@ async function initializeSettings() {
         if (sniperDomainsElement) {
             try {
                 const sniperData = await browser.storage.local.get('sniperDomains');
-                sniperDomainsElement.value = sniperData.sniperDomains ? 
+                sniperDomainsElement.value = Array.isArray(sniperData.sniperDomains) ?
                     sniperData.sniperDomains.join(', ') : '';
                 
                 sniperDomainsElement.addEventListener('change', async function() {
-                    const entries = this.value.split(',')
+                    // new Set(): drops keywords typed twice
+                    const entries = [...new Set(this.value.split(',')
                         .map(d => d.trim().toLowerCase())
-                        .filter(d => d);
+                        .filter(d => d))];
 
                     // Keywords that are too short would match an unreasonable
                     // number of unrelated domains (see MIN_SNIPER_KEYWORD_LENGTH
@@ -317,84 +271,85 @@ async function importCookies() {
         const file = event.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onerror = () => {
-            console.error('Error reading cookie file:', reader.error);
+        let fileContent;
+        try {
+            fileContent = await file.text();
+        } catch (error) {
+            console.error('Error reading cookie file:', error);
             showMessage("Couldn't read that file — it may have moved, or you may not have permission to read it.", true);
-        };
-        reader.onload = async (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
+            return;
+        }
 
-                // A missing/non-array `cookies` field means this almost
-                // certainly isn't a SimpleCookie export at all — treat it as
-                // a parse error rather than silently "importing" 0 cookies
-                // and reporting that as a success.
-                if (!Array.isArray(data.cookies)) {
-                    throw new Error("This doesn't look like a SimpleCookie export file — no cookies array found.");
-                }
-                const cookies = data.cookies;
-                let importCount = 0;
-                let errorCount = 0;
+        try {
+            const data = JSON.parse(fileContent);
 
-                for (const cookie of cookies) {
-                    // Validate the cookie data
-                    if (!cookie || typeof cookie !== 'object' || !cookie.name || !cookie.domain || !cookie.path) {
-                        errorCount++;
-                        continue; 
-                    }
-
-                    try {
-                        // Prepare the domain (remove leading dot if necessary)
-                        const domain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
-                        const url = `http${cookie.secure ? 's' : ''}://${domain}${cookie.path}`;
-                        
-                        const cookieToSet = {
-                            url: url,
-                            name: cookie.name,
-                            value: cookie.value,
-                            path: cookie.path,
-                            secure: cookie.secure,
-                            httpOnly: cookie.httpOnly,
-                            expirationDate: cookie.expirationDate,
-                            sameSite: cookie.sameSite,
-                            storeId: cookie.storeId,
-                            firstPartyDomain: cookie.firstPartyDomain,
-                            partitionKey: cookie.partitionKey
-                        };
-
-                        // Set the domain property only if the cookie is not host-only
-                        if (!cookie.hostOnly) {
-                            cookieToSet.domain = cookie.domain;
-                        }
-
-                        // Attempt to set the cookie
-                        await browser.cookies.set(cookieToSet);
-                        importCount++;
-                    } catch (err) {
-                        console.error('Error importing cookie:', err);
-                        errorCount++;
-                    }
-                }
-
-                if (errorCount === 0) {
-                    showMessage(`Successfully imported ${importCount} ${cookieWord(importCount)}!`);
-                } else {
-                    // Red "error" styling once failures are the majority (including
-                    // a 100% failure); a mostly-successful import still mentions the
-                    // failures in the text, but isn't flagged as if it mostly failed.
-                    const isMostlyFailed = errorCount >= importCount;
-                    showMessage(
-                        `Imported ${importCount} ${cookieWord(importCount)}, but ${errorCount} couldn't be imported.`,
-                        isMostlyFailed
-                    );
-                }
-            } catch (error) {
-                console.error('Error parsing cookie file:', error);
-                showMessage("Whoops! 😰 Our cookie jar had a little mishap. Your cookie file might have some crumbs out of place. Could you please ensure it's baked following SimpleCookie factory standards and give it another whirl?", true);
+            // A missing/non-array `cookies` field means this almost
+            // certainly isn't a SimpleCookie export at all — treat it as
+            // a parse error rather than silently "importing" 0 cookies
+            // and reporting that as a success.
+            if (!Array.isArray(data.cookies)) {
+                throw new Error("This doesn't look like a SimpleCookie export file — no cookies array found.");
             }
-        };
-        reader.readAsText(file);
+            const cookies = data.cookies;
+            let importCount = 0;
+            let errorCount = 0;
+
+            for (const cookie of cookies) {
+                // Validate the cookie data
+                if (!cookie || typeof cookie !== 'object' || !cookie.name || !cookie.domain || !cookie.path) {
+                    errorCount++;
+                    continue; 
+                }
+
+                try {
+                    // Prepare the domain (remove leading dot if necessary)
+                    const domain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+                    const url = `http${cookie.secure ? 's' : ''}://${domain}${cookie.path}`;
+                    
+                    const cookieToSet = {
+                        url: url,
+                        name: cookie.name,
+                        value: cookie.value,
+                        path: cookie.path,
+                        secure: cookie.secure,
+                        httpOnly: cookie.httpOnly,
+                        expirationDate: cookie.expirationDate,
+                        sameSite: cookie.sameSite,
+                        storeId: cookie.storeId,
+                        firstPartyDomain: cookie.firstPartyDomain,
+                        partitionKey: cookie.partitionKey
+                    };
+
+                    // Set the domain property only if the cookie is not host-only
+                    if (!cookie.hostOnly) {
+                        cookieToSet.domain = cookie.domain;
+                    }
+
+                    // Attempt to set the cookie
+                    await browser.cookies.set(cookieToSet);
+                    importCount++;
+                } catch (err) {
+                    console.error('Error importing cookie:', err);
+                    errorCount++;
+                }
+            }
+
+            if (errorCount === 0) {
+                showMessage(`Successfully imported ${importCount} ${cookieWord(importCount)}!`);
+            } else {
+                // Red "error" styling once failures are the majority (including
+                // a 100% failure); a mostly-successful import still mentions the
+                // failures in the text, but isn't flagged as if it mostly failed.
+                const isMostlyFailed = errorCount >= importCount;
+                showMessage(
+                    `Imported ${importCount} ${cookieWord(importCount)}, but ${errorCount} couldn't be imported.`,
+                    isMostlyFailed
+                );
+            }
+        } catch (error) {
+            console.error('Error parsing cookie file:', error);
+            showMessage("Whoops! 😰 Our cookie jar had a little mishap. Your cookie file might have some crumbs out of place. Could you please ensure it's baked following SimpleCookie factory standards and give it another whirl?", true);
+        }
     };
     input.click();
 }
@@ -433,13 +388,19 @@ async function resetSettingsAndFavorites() {
 
 // ==================== EVENT LISTENERS ====================
 
+// The links below are plain <a href="#"> elements: event.preventDefault()
+// stops Firefox from following that "#", which would otherwise make the page
+// jump back to its top on every click.
+
 // Handle create cookie button
-document.getElementById('createCookie')?.addEventListener('click', () => {
+document.getElementById('createCookie')?.addEventListener('click', (event) => {
+    event.preventDefault();
     browser.tabs.create({ url: 'create.html' });
 });
 
 // Handle tip icon
-document.getElementById('tipIcon')?.addEventListener('click', function() {
+document.getElementById('tipIcon')?.addEventListener('click', function(event) {
+    event.preventDefault();
     document.getElementById('imagePopup').style.display = 'block';
     document.getElementById('overlay').style.display = 'block';
 });
@@ -450,16 +411,12 @@ document.getElementById('overlay')?.addEventListener('click', function() {
     document.getElementById('overlay').style.display = 'none';
 });
 
-// Close message box
-document.getElementById('closeMessage')?.addEventListener('click', function() {
-    document.getElementById('messageBox').style.display = 'none';
-});
-
 // Reset button — this is a destructive, irreversible action (it also wipes
 // the mySniper keyword list and the keyboard shortcut, not just
 // favorites/settings), so confirm first rather than acting on a single
 // misclick of a plain link.
-document.getElementById('resetButton')?.addEventListener('click', async () => {
+document.getElementById('resetButton')?.addEventListener('click', async (event) => {
+    event.preventDefault();
     const confirmed = window.confirm(
         'Reset all settings, favorites, your mySniper keyword list, and your keyboard shortcut back to factory defaults? This cannot be undone.'
     );
@@ -469,8 +426,14 @@ document.getElementById('resetButton')?.addEventListener('click', async () => {
 });
 
 // Export and import buttons
-document.getElementById('exportCookies')?.addEventListener('click', exportAllCookies);
-document.getElementById('importCookies')?.addEventListener('click', importCookies);
+document.getElementById('exportCookies')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    exportAllCookies();
+});
+document.getElementById('importCookies')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    importCookies();
+});
 
 
 // ==================== INITIALIZATION ====================

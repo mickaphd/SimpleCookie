@@ -8,17 +8,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A minimalist yet efficient cookie manager for Firefox">
     <title>SimpleCookie</title>
-    <link rel="preload" href="resources/icon1.svg" as="image">
-    <link rel="preload" href="resources/icon2.svg" as="image">
-    <link rel="preload" href="resources/icon3.svg" as="image">
-    <link rel="preload" href="resources/icon4.svg" as="image">
-    <link rel="preload" href="resources/icon5.svg" as="image">
     <link rel="stylesheet" href="popup.css">
     <script defer src="common.js"></script>
     <script defer src="popup.js"></script>
 </head>
 <body>
     <div id="popup">
+        <div id="search-bar">
+            <input type="text" id="search" placeholder="Search…" title="Type to filter the list of websites." aria-label="Filter the list of websites" autocomplete="off" spellcheck="false" autofocus>
+            <button type="button" id="search-clear" title="Clear the search." aria-label="Clear the search" hidden>×</button>
+        </div>
         <div id="cookies-container"></div>
         <div id="dock-wrapper">
             <div id="dock">
@@ -29,7 +28,7 @@
                 <a href="settings.html" target="_blank" title="Open the settings." aria-label="Access the configuration settings">
                     <img class="dock-icon" id="icon4" src="resources/icon4.svg" title="Open the settings."/>
                 </a>
-                <img class="dock-icon" id="icon5" src="resources/icon5.svg" title="Undo the very last cookie deletion. You have 20 seconds to do so. Closing the pop-up will prevent recovery. Expired cookies cannot be restored." aria-label="Undo the last cookie deletion"/>
+                <img class="dock-icon" id="icon5" src="resources/icon5.svg" title="Undo the very last cookie deletion (a website, a single cookie, or one of the two delete actions of this dock — not myCleaner). You have 20 seconds to do so. Closing the pop-up will prevent recovery. Expired cookies cannot be restored." aria-label="Undo the last cookie deletion"/>
                 <span id="cookie-counter" class="dock-icon" title="Total number of cookies."></span>
             </div>
         </div>

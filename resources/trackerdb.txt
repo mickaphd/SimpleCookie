@@ -646,6 +646,7 @@ affiliator.com
 affiliaweb.fr
 affimax.de
 affinity.com
+affirm.com
 affiz.net
 afgr2.com
 afsanalytics.com
@@ -678,6 +679,7 @@ akamoihd.net
 akanoo.com
 akavita.com
 akstat.io
+alb.reddit.com
 aldi-international.com
 alephd.com
 alexa.com
@@ -1044,6 +1046,7 @@ awswaf.com
 ax.xrea.com
 axf8.net
 axx-eu.amazon-adsystem.com
+ay.delivery
 ayads.co
 azadify.com
 azmk8s.io
@@ -1089,6 +1092,7 @@ basilic.io
 bat.bing.com
 bat.r.msn.com
 batanga.com
+batch.com
 bauernative.com
 baur.de
 baynote.net
@@ -1470,6 +1474,7 @@ cdn.retailrocket.ru
 cdn.rlets.com
 cdn.sailthru.com
 cdn.secretrune.com
+cdn.selma.se
 cdn.shareaholic.com
 cdn.shopify.com
 cdn.smartseer.com
@@ -1776,6 +1781,7 @@ containers.piwik.pro
 contatoreaccessi.com
 contaxe.com
 content-choice.de
+content-loader.com
 content-recommendation.net
 content.ad
 content.dl-rms.com
@@ -1991,6 +1997,7 @@ d3sjgucddk68ji.cloudfront.net
 d3uemyw1e5n0jw.cloudfront.net
 d3v27wwd40f0xu.cloudfront.net
 d3von6il1wr7wo.cloudfront.net
+d41.co
 d47xnnr8b1rki.cloudfront.net
 d5nxst8fruw4z.cloudfront.net
 d5phz18u4wuww.cloudfront.net
@@ -2835,6 +2842,7 @@ hsleadflows.net
 hsoub.com
 hstrck.com
 htlbid.com
+html-load.com
 httpool.com
 hu-manity.co
 hubapi.com
@@ -3271,6 +3279,7 @@ ligatus.com
 ligatus.de
 lightboxcdn.com
 lijit.com
+lime-forms.com
 limk.com
 line-apps.com
 line-scdn.net
@@ -4547,6 +4556,7 @@ script.ioam.de
 scripts.kiosked.com
 scripts.simpleanalyticscdn.com
 scripts.verticalacuity.com
+scriptwrapper.com
 scroll.com
 scrsrch.com
 scupio.com
@@ -4683,6 +4693,7 @@ shopgate.com
 shopify.com
 shopify.privy.com
 shopify.retargetapp.com
+shopifyapps.com
 shopifycdn.com
 shopifycloud.com
 shopifysvc.com
@@ -5603,6 +5614,7 @@ verticalscope.com
 veruta.com
 vgwort.de
 vi-tag.net
+via.batch.com
 viafoura.co
 viafoura.com
 viafoura.net
@@ -5865,7 +5877,9 @@ wpimg.pl
 wrating.com
 writer-us.smartlook.com
 ws.friendbuy.com
+wsmcdn.audioeye.com
 wsod.com
+wsv3cdn.audioeye.com
 wt-eu02.net
 wt-safetag.com
 wt.omnisendlink.com

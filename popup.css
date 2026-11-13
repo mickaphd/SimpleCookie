@@ -7,12 +7,8 @@
     --background-color: #FFF;
     --text-color: #000;
     --highlight-color: #DFDFE4;
-    --cookie-counter-color: #000;
     --separator-color: #DFDFE4;
     --dock-background: #f5f5f7;
-    --dock-border: #e0e0e4;
-    --text-color-rgb: 0, 0, 0;
-    --highlight-color-rgb: 223, 223, 228;
     --hover-highlight: rgba(0, 0, 0, 0.1);
     --primary-green: #05A55D;
 }
@@ -24,12 +20,8 @@
         --background-color: #42414C;
         --text-color: #FCFCFF;
         --highlight-color: #5F5E68;
-        --cookie-counter-color: #FCFCFF;
         --separator-color: #5F5E68;
         --dock-background: #38373f;
-        --dock-border: #4d4c56;
-        --text-color-rgb: 252, 252, 255;
-        --highlight-color-rgb: 95, 94, 104;
         --hover-highlight: rgba(255, 255, 255, 0.1);
     }
 }
@@ -54,6 +46,58 @@ body {
     position: relative;
 }
 
+/* ==================== SEARCH BAR ==================== */
+
+/* Deliberately thin and borderless: same left alignment as the stars and
+   text size as the rows below, with only a hairline to separate it from them. */
+#search-bar {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--separator-color);
+}
+
+#search {
+    flex: 1;
+    min-width: 0;
+    /* 16px on the left, not 12px like the rows: the star image has a few
+       pixels of empty margin around its drawing, so this is what lines the
+       text up with the visible edge of the stars */
+    padding: 7px 0 7px 16px;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+
+/* Small cross that clears the search (hidden while the bar is empty) */
+#search-clear {
+    padding: 0 12px;
+    border: none;
+    background: none;
+    color: var(--text-color);
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.35;
+    cursor: pointer;
+}
+
+#search-clear:hover {
+    opacity: 1;
+}
+
+#search::placeholder {
+    color: var(--text-color);
+    opacity: 0.35;
+}
+
+/* Rows filtered out by the search bar (`hidden` alone isn't enough: the
+   display: flex of .cookie-item below would override it) */
+.cookie-item[hidden] {
+    display: none;
+}
+
 #cookies-container {
     max-height: 500px;
     overflow-y: auto;
@@ -76,8 +120,9 @@ body {
     color: var(--text-color);
     white-space: nowrap;
     position: relative;
-    will-change: background-color;
-    padding: 3px 20px;
+    /* Same small margin on both sides; the search bar's text is aligned on
+       the stars (see #search) */
+    padding: 3px 12px;
     font-size: 13.5px;
     line-height: 1.3;
     transition: background-color 0.15s ease;
@@ -88,8 +133,29 @@ body {
     cursor: pointer;
 }
 
-.cookie-item[style*="color: rgb(5, 165, 93)"] {
+/* Domains that have an open tab (class added by displayCookies() in popup.js) */
+.cookie-item.open-tab {
     color: var(--primary-green);
+}
+
+/* Tab Switcher hint: while Command (macOS) / Ctrl (PC) is held down,
+   popup.js adds .tab-switcher-active to the container */
+.tab-switcher-active .cookie-item.open-tab {
+    font-weight: bold;
+    transform: translateX(4px);
+    cursor: alias; /* Show 'goto' cursor */
+}
+
+/* Shown in place of the list when the last cookies were just deleted and
+   can still be restored with Undo (see showNoCookiesMessage() in popup.js) */
+.empty-message {
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 /* ==================== STAR ICONS ==================== */
@@ -120,7 +186,8 @@ body {
 #dock-wrapper {
     padding: 6px 0;
     background-color: var(--background-color);
-    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
+    /* Same hairline as under the search bar, for a consistent look */
+    border-top: 1px solid var(--separator-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -144,7 +211,7 @@ body {
     height: 17px;
     margin: 0 6px;
     cursor: pointer;
-    opacity: 0.1;
+    opacity: 0.15;
     transition: opacity 0.1s, transform 0.1s;
     display: flex;
     align-items: center;
@@ -168,12 +235,6 @@ body {
     opacity: 1;
     align-items: center;
     vertical-align: middle;
-}
-
-@media (prefers-color-scheme: light) {
-    .dock-icon {
-        filter: invert(0%);
-    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -249,6 +310,7 @@ body {
 
 .cookie-table {
     border-collapse: collapse;
+    color: var(--text-color);
     font-size: 12px;
     font-family: inherit;
     table-layout: fixed;
@@ -274,23 +336,18 @@ body {
     text-overflow: ellipsis;
 }
 
+/* Hover effect for the cookie rows of the detailed table */
+.cookie-row:hover {
+    background-color: var(--highlight-color);
+    cursor: pointer;
+}
+
 .cookie-table th:last-child,
 .cookie-table td:last-child {
     width: 30px;
     min-width: 30px;
     max-width: 30px;
     text-align: center;
-}
-
-@media (prefers-color-scheme: dark) {
-    .cookie-table {
-        color: white;
-    }
-
-    .header-cell {
-        background-color: var(--dock-background);
-        color: white;
-    }
 }
 
 /* ==================== COUNTER ==================== */

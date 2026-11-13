@@ -53,13 +53,8 @@ let backgroundReadyPromise = null;
 function initializeBackground() {
     backgroundReadyPromise = (async () => {
         try {
-            const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-            if (tabs.length > 0) {
-                activeTabId = tabs[0].id;
-                updateActiveDomain(tabs[0].url);
-                // Update badge immediately on startup
-                await updateBadgeFromBackground();
-            }
+            // Update badge immediately on startup
+            await syncActiveTab();
 
             // Array.isArray guards: storage is user/JSON-editable (e.g. via
             // about:debugging), so don't assume either key is actually an array.
@@ -84,6 +79,19 @@ function initializeBackground() {
 // Initialize on script load
 initializeBackground();
 
+/**
+ * Looks up which tab the user is currently looking at (the active tab of
+ * the focused window) and refreshes the badge for it.
+ */
+async function syncActiveTab() {
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tabs.length > 0) {
+        activeTabId = tabs[0].id;
+        updateActiveDomain(tabs[0].url);
+        await updateBadgeFromBackground();
+    }
+}
+
 // ==================== EVENT LISTENERS ====================
 
 /**
@@ -104,12 +112,31 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
 
 /**
  * Listen for URL changes within the active tab
+ * The { properties: ['url'] } filter tells Firefox to only call this for URL
+ * changes — without it, this listener (and so this whole background page)
+ * was woken up for every title, favicon or loading-status change of every
+ * tab, just to ignore them.
  */
-browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     // Only update if this is the active tab
     if (tabId === activeTabId && changeInfo.url) {
         updateActiveDomain(changeInfo.url);
         await updateBadgeFromBackground();
+    }
+}, { properties: ['url'] });
+
+/**
+ * Listen for the user switching between Firefox windows: no tab gets
+ * "activated" when that happens, so without this the badge kept showing the
+ * count of the previous window's site.
+ */
+browser.windows.onFocusChanged.addListener(async (windowId) => {
+    // WINDOW_ID_NONE = Firefox itself lost focus (another app is in front)
+    if (windowId === browser.windows.WINDOW_ID_NONE) return;
+    try {
+        await syncActiveTab();
+    } catch (error) {
+        console.error('Error handling window focus change:', error);
     }
 });
 
@@ -154,8 +181,8 @@ browser.storage.onChanged.addListener(async (changes) => {
 /**
  * Listen for the single user-configurable keyboard shortcut (see
  * manifest.json's "commands" key and settings.js's Keyboard Shortcut
- * section, which is what actually assigns/changes the key combination via
- * browser.commands.update()). This only decides WHICH action to run —
+ * section, which sends the user to Firefox's own shortcuts page to assign
+ * the key combination). This only decides WHICH action to run —
  * the key combination itself lives entirely in Firefox's own commands
  * storage, not in browser.storage.local.
  */
@@ -192,6 +219,10 @@ browser.commands.onCommand.addListener(async (command) => {
         await browser.action.openPopup();
     } catch (error) {
         console.error('Error handling keyboard shortcut command:', error);
+        // The popup couldn't be opened: don't leave the stashed action
+        // behind, or it would fire (with its confirmation modal popping up
+        // out of nowhere) the next time the popup is opened normally.
+        await browser.storage.local.remove('pendingShortcutAction').catch(() => {});
     }
 });
 
@@ -200,10 +231,9 @@ browser.commands.onCommand.addListener(async (command) => {
 /**
  * Listen for messages from popup
  */
-browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request) => {
     if (request.action === 'updateBadge') {
-        await updateBadgeFromBackground();
-        sendResponse({ success: true });
+        updateBadgeFromBackground();
     }
 });
 
@@ -288,15 +318,13 @@ async function countCookiesForDomain(hostname) {
         const containers = await browser.contextualIdentities.query({});
         const storeIds = [...containers.map(container => container.cookieStoreId), ""];
 
-        const cookiePromises = storeIds.flatMap(storeId => [
-            browser.cookies.getAll({ storeId, domain: mainDomain }),
-            browser.cookies.getAll({ storeId, domain: mainDomain, partitionKey: {} })
-        ]);
+        // Same options as the shared fetchAllCookies() (see common.js for
+        // why partitionKey: {} and firstPartyDomain: null), plus the domain.
+        const cookiePromises = storeIds.map(storeId =>
+            browser.cookies.getAll({ storeId, domain: mainDomain, partitionKey: {}, firstPartyDomain: null })
+        );
 
-        const matchingCookies = (await Promise.all(cookiePromises)).flat();
-        const uniqueKeys = new Set(matchingCookies.map(cookieIdentityKey));
-
-        return uniqueKeys.size;
+        return (await Promise.all(cookiePromises)).flat().length;
     } catch (error) {
         console.error('Error counting cookies:', error);
         return 0;
@@ -345,14 +373,7 @@ async function sweepSniperDomains(sniperDomains) {
         );
 
         // Promise.allSettled: one bad cookie shouldn't stop the rest from being removed.
-        await Promise.allSettled(cookiesToRemove.map(cookie =>
-            browser.cookies.remove({
-                url: getCookieUrl(cookie),
-                name: cookie.name,
-                storeId: cookie.storeId,
-                partitionKey: cookie.partitionKey
-            })
-        ));
+        await Promise.allSettled(cookiesToRemove.map(removeCookie));
     } catch (error) {
         console.error('Error sweeping mySniper domains:', error);
     }
@@ -379,12 +400,7 @@ async function enforceSniperOnCookie(cookie) {
         if (cachedFavoriteMainDomains.has(getMainDomain(cookie.domain))) return;
         if (!cachedSniperDomains.some(domain => cookieMatchesSniperDomain(cookie, domain))) return;
 
-        await browser.cookies.remove({
-            url: getCookieUrl(cookie),
-            name: cookie.name,
-            storeId: cookie.storeId,
-            partitionKey: cookie.partitionKey
-        });
+        await removeCookie(cookie);
     } catch (error) {
         console.error('Error enforcing mySniper on cookie change:', error);
     }

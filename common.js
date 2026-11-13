@@ -1,7 +1,7 @@
 /* SimpleCookie, a minimalist yet efficient cookie manager for Firefox */
 /* Made with ❤ by micka from Paris */
 
-/* Shared code loaded by background.js, popup.js and settings.js.               */
+/* Shared code loaded by background.js, popup.js, settings.js and create.js.     */
 /* These three contexts each used to keep their own copy of the functions       */
 /* below; that drifted over time (e.g. the badge in the background script no    */
 /* longer grouped domains the same way as the popup, and the cookie export in   */
@@ -96,21 +96,9 @@ function getMainDomain(domain) {
 // ==================== COOKIE FETCHING ====================
 
 /**
- * A cookie's identity in Firefox is fully defined by its name, domain, path,
- * storeId (container) and partitionKey (CHIPS) together — this key is used
- * to de-duplicate cookie lists everywhere that matters (fetchAllCookies()
- * below, and background.js's domain-scoped cookie count).
- * @param {Object} cookie - Cookie object
- * @returns {string}
- */
-function cookieIdentityKey(cookie) {
-    return `${cookie.name}|${cookie.domain}|${cookie.path}|${cookie.storeId}|${cookie.partitionKey ? JSON.stringify(cookie.partitionKey) : ''}`;
-}
-
-/**
- * Fetches all cookies from all containers and avoids duplicates
+ * Fetches all cookies from all containers
  * Retrieves both normal and partitioned cookies
- * @returns {Promise<Array>} Array of unique cookie objects
+ * @returns {Promise<Array>} Array of cookie objects
  */
 async function fetchAllCookies() {
     try {
@@ -120,26 +108,20 @@ async function fetchAllCookies() {
         // Get all store IDs (containers + default)
         const storeIds = [...containers.map(container => container.cookieStoreId), ""];
 
-        // For each store ID, fetch both normal and partitioned cookies
-        const cookiePromises = storeIds.flatMap(storeId => [
-            browser.cookies.getAll({ storeId }),
-            browser.cookies.getAll({ storeId, partitionKey: {} })
-        ]);
+        // One request per store ID is enough:
+        // - partitionKey: {} returns the normal cookies AND the partitioned
+        //   (CHIPS) ones in a single call — asking for the normal ones a
+        //   second time, separately, only produced duplicates to filter out.
+        // - firstPartyDomain: null is required by Firefox when First-Party
+        //   Isolation (privacy.firstparty.isolate) is enabled — without it
+        //   the call fails and no cookie is listed at all. It changes
+        //   nothing when that option is off.
+        const cookiePromises = storeIds.map(storeId =>
+            browser.cookies.getAll({ storeId, partitionKey: {}, firstPartyDomain: null })
+        );
 
         // Wait for all promises to resolve and flatten the result
-        const allCookies = (await Promise.all(cookiePromises)).flat();
-
-        const uniqueMap = new Map();
-
-        allCookies.forEach(cookie => {
-            const key = cookieIdentityKey(cookie);
-
-            if (!uniqueMap.has(key)) {
-                uniqueMap.set(key, cookie);
-            }
-        });
-
-        return Array.from(uniqueMap.values());
+        return (await Promise.all(cookiePromises)).flat();
     } catch (error) {
         console.error('Error fetching cookies:', error);
         return [];
@@ -147,17 +129,59 @@ async function fetchAllCookies() {
 }
 
 
-// ==================== COOKIE URL HELPER ====================
+// ==================== COOKIE URL & REMOVAL HELPERS ====================
 
 /**
  * Constructs the URL used to identify/remove a cookie via the cookies API.
- * Shared by popup.js, settings.js and background.js so a cookie's "identity
- * URL" is always built the exact same way.
+ * Shared by popup.js and background.js so a cookie's "identity URL" is
+ * always built the exact same way.
  * @param {Object} cookie - Cookie object
  * @returns {string} URL for the cookie
  */
 function getCookieUrl(cookie) {
     return `http${cookie.secure ? 's' : ''}://${cookie.domain}${cookie.path}`;
+}
+
+/**
+ * Removes one cookie. Shared by popup.js (manual deletions) and
+ * background.js (mySniper) so both always identify a cookie the exact same
+ * way: its URL, name, container (storeId), partition (CHIPS) and
+ * first-party domain (only meaningful when First-Party Isolation is on).
+ * @param {Object} cookie - Cookie object, as returned by the cookies API
+ * @returns {Promise} Promise from browser.cookies.remove
+ */
+function removeCookie(cookie) {
+    return browser.cookies.remove({
+        url: getCookieUrl(cookie),
+        name: cookie.name,
+        storeId: cookie.storeId,
+        firstPartyDomain: cookie.firstPartyDomain,
+        partitionKey: cookie.partitionKey
+    });
+}
+
+
+// ==================== COOKIE EDITOR LINK ====================
+
+/**
+ * Builds the address of the cookie editor (create.html) for one cookie.
+ * The address only carries what identifies the cookie — never its value,
+ * which is often a login token and has no business being in an address bar
+ * or in the browsing history. create.js reads the cookie itself from
+ * Firefox using these fields (see findCookieToEdit() there).
+ * @param {Object} cookie - Cookie object
+ * @returns {string} Address of the editor page for this cookie
+ */
+function getCookieEditUrl(cookie) {
+    const params = new URLSearchParams({
+        name: cookie.name,
+        domain: cookie.domain,
+        path: cookie.path,
+        storeId: cookie.storeId,
+        partition: cookie.partitionKey?.topLevelSite || '',
+        firstPartyDomain: cookie.firstPartyDomain || ''
+    });
+    return `create.html?${params}`;
 }
 
 
